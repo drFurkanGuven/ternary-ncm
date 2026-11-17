@@ -1,0 +1,18 @@
+{
+ "_source": "Colab \u00e7\u0131kt\u0131s\u0131 (kullan\u0131c\u0131n\u0131n yap\u0131\u015ft\u0131rd\u0131\u011f\u0131 log), colab/ncm_asama2b_qat.ipynb ad\u0131m 9c, 2026-11-15",
+ "checkpoint": "E1_fp_scratch_12k",
+ "step": 12000,
+ "train_first500": {
+  "solved_pct": 98.6,
+  "cell_pct": 99.98271604938272,
+  "valid_pct": 98.6,
+  "n": 500
+ },
+ "test_first500": {
+  "solved_pct": 24.8,
+  "cell_pct": 88.69382716049383,
+  "valid_pct": 24.8,
+  "n": 500
+ },
+ "conclusion": "Ezber: model e\u011fitim bulmacalar\u0131n\u0131 neredeyse tamamen \u00e7\u00f6z\u00fcyor, testte %25."
+}

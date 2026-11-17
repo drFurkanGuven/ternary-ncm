@@ -1,0 +1,48 @@
+{
+ "experiment": "diag_ptq_mechanism",
+ "description": "Official FP Sudoku-hard checkpoint, measurement only. A: body (32 layers) perturbed by INT8/4/3, ternary, or Gaussian noise with matched per-layer relative Frobenius error (first 500 test puzzles). B: ternary (absmean per-tensor) applied to single layers / blocks / first-k / last-k blocks (first 256 test puzzles). Notebook ncm_asama2b_qat.ipynb section 11, module colab/ncm_diag.py.",
+ "gpu": "A100",
+ "A_error_curve_first500": {
+  "fp":        {"rel_err": 0.000, "solved": 85.0, "cell": 98.34},
+  "int8":      {"rel_err": 0.011, "solved": 84.8, "cell": 98.27},
+  "int4":      {"rel_err": 0.190, "solved": 83.4, "cell": 97.91},
+  "int3":      {"rel_err": 0.417, "solved": 0.0,  "cell": 73.86},
+  "tern":      {"rel_err": 0.559, "solved": 0.0,  "cell": 27.50},
+  "tern_ch":   {"rel_err": 0.540, "solved": 0.0,  "cell": 23.33},
+  "noise_0.05": {"rel_err": 0.05, "solved": 85.8, "cell": 98.40},
+  "noise_0.1":  {"rel_err": 0.10, "solved": 85.0, "cell": 98.24},
+  "noise_0.2":  {"rel_err": 0.20, "solved": 80.8, "cell": 97.82},
+  "noise_0.25": {"rel_err": 0.25, "solved": 72.0, "cell": 96.95},
+  "noise_0.3":  {"rel_err": 0.30, "solved": 29.6, "cell": 92.47},
+  "noise_0.35": {"rel_err": 0.35, "solved": 0.2,  "cell": 80.20},
+  "noise_0.4":  {"rel_err": 0.40, "solved": 0.0,  "cell": 58.85},
+  "noise_0.5":  {"rel_err": 0.50, "solved": 0.0,  "cell": 22.20}
+ },
+ "same_codes_as_fp_pct": {"int8": 41.8, "noise_0.05": 1.6, "int4": 0.0},
+ "per_level": {
+  "fp":   {"tf_acc": [0.838,0.99,0.9385,0.9523,1.0,0.9398,0.9371,0.9302,0.9419,0.9261,0.9238,0.9854], "gen_acc": [0.838,0.987,0.9335,0.943,1.0,0.9337,0.9071,0.8787,0.8644,0.8011,0.7824,0.9503]},
+  "int4": {"tf_acc": [0.81,0.985,0.9015,0.926,1.0,0.9195,0.9114,0.8999,0.9098,0.888,0.8878,0.9804], "gen_acc": [0.81,0.98,0.8955,0.9183,1.0,0.912,0.8817,0.8455,0.8272,0.7482,0.7259,0.941], "block_rel_drift": [0.1336,0.1944,0.2241,0.2181,0.218,0.232,0.3353,0.4385]},
+  "int3": {"tf_acc": [0.448,0.91,0.5175,0.5493,1.0,0.5475,0.543,0.4912,0.5237,0.5184,0.547,0.8354], "gen_acc": [0.448,0.91,0.5075,0.541,1.0,0.5432,0.5196,0.4554,0.4632,0.4052,0.4108,0.6965], "block_rel_drift": [0.3151,0.4271,0.5244,0.5648,0.5813,0.6194,0.7576,1.4932]},
+  "tern": {"tf_acc": [0.116,0.909,0.091,0.0963,1.0,0.1177,0.0848,0.0952,0.0944,0.151,0.1773,0.4334], "gen_acc": [0.116,0.909,0.096,0.0943,1.0,0.1158,0.0846,0.0888,0.0805,0.1039,0.0917,0.2646], "first_div_level_hist": [446,19,35,0,0,0,0,0,0,0,0,0,0], "block_rel_drift": [0.3677,0.5502,0.6842,0.7633,0.8149,0.8603,0.9264,1.011]},
+  "noise_0.3": {"tf_acc": [0.652,0.961,0.7535,0.7603,1.0,0.7786,0.7672,0.7415,0.7644,0.7522,0.7579,0.9552], "gen_acc": [0.652,0.958,0.748,0.757,1.0,0.7732,0.741,0.6871,0.6781,0.5906,0.584,0.8725], "block_rel_drift": [0.2217,0.3081,0.3606,0.3881,0.3964,0.4354,0.5455,1.1274]}
+ },
+ "B_ternary_sweep_first256_solved": {
+  "single_layer": {"transformer.wte": 0.0, "blocks.0.attn.c_attn": 0.0, "blocks.0.attn.c_proj": 0.0, "blocks.0.mlp.c_fc": 14.45, "blocks.0.mlp.c_proj": 83.98,
+                   "blocks.1.attn.c_attn": 10.16, "blocks.1.mlp.c_fc": 50.0, "blocks.2.mlp.c_fc": 55.86, "blocks.3.mlp.c_fc": 65.23,
+                   "other_body_layers_range": [78.12, 84.38], "lm_heads_each_range": [84.38, 85.55]},
+  "single_block": [0.0, 24.61, 76.95, 73.44, 69.92, 71.88, 73.83, 73.44],
+  "first_k_blocks_1_to_7": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+  "last_k_blocks_1_to_7": [73.44, 57.42, 33.98, 3.12, 0.0, 0.0, 0.0],
+  "io_only_13_layers": 0.0
+ },
+ "theory": {"optimal_ternary_rel_err_gaussian": 0.436, "absmean_ternary_rel_err_gaussian": 0.513, "int4_absmax_rel_err_gaussian": 0.221,
+            "note": "Computed numerically on 4M N(0,1) samples (TWN-style threshold search, L2-optimal scale)."},
+ "conclusions": [
+  "Collapse is governed by error magnitude, not by ternary per se: Gaussian noise with the same relative error degrades the model like quantization does (int4 0.19 -> 83.4 vs noise 0.20 -> 80.8; int3 0.42 and noise 0.40 both 0).",
+  "Tolerance threshold: 50% solve rate at rel_err ~0.28; >=0.35 gives ~0. Even optimal ternary has rel_err >= ~0.44 for Gaussian weights (measured 0.47-0.56 on real weights), so any per-layer ternary PTQ must fail on this model.",
+  "Error does not cascade across levels: with ternary weights TF accuracy (true previous codes given) is already ~0.1 at every level, close to generation accuracy; 446/500 puzzles diverge from FP already at level 0. The damage is in the transformer's per-level prediction, accumulating with depth (hidden-state drift 0.37 after block 0 -> 1.01 after block 7).",
+  "Sensitivity is concentrated at the input: wte alone, or block-0 attention alone, gives 0%. The earlier 'io_only (0.9% of params) -> 0%' result is caused by the input projection wte, not by the 12 output heads (each head ternarized alone: ~85%).",
+  "Generation codes are not unique: INT8 keeps 84.8% solved but only 41.8% identical codes; noise 0.05 keeps 85.8% with 1.6% identical codes."
+ ],
+ "note": "Transcribed from pasted Colab log. Deterministic (noise seed 0). Subsets of the test set."
+}

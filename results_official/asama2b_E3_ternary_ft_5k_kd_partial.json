@@ -1,0 +1,27 @@
+{
+ "experiment": "E3_ternary_ft_5k_kd (stopped at step 2000)",
+ "description": "E3 + KD from frozen official FP teacher (loss = 0.5 CE + 0.5 KL, T=1, alpha=0 weights) + quant lambda warmup 0->1 over 500 steps. Stopped by us at step 2000 (no gain vs E3_ternary_ft_5k); checkpoint at step 2000 in Drive.",
+ "gpu": "A100",
+ "during_training_test_subset_256": {
+  "1000": 66.8,
+  "2000": 68.75
+ },
+ "E3_5k_same_steps": {
+  "1000": 66.41,
+  "2000": 69.53
+ },
+ "holdout_tf_acc_level0": {
+  "1000": 0.8086,
+  "2000": 0.7734
+ },
+ "holdout_tf_loss": {
+  "1000": 0.2358,
+  "2000": 0.218
+ },
+ "ce_during_lambda_warmup": {
+  "50": 0.2442,
+  "250": 0.2861,
+  "500": 0.5198
+ },
+ "note": "Lambda warmup delays rather than avoids the quantization shock: CE rose to 0.52 at lambda=1 (E3 without warmup: 0.484 at step 500). Single seed, 256-puzzle subset (+-3 pt)."
+}

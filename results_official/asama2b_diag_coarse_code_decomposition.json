@@ -1,0 +1,35 @@
+{
+ "experiment": "coarse_code_decomposition",
+ "description": "Per-puzzle generation on the full 2000-puzzle test set; true coarsest code = tokenizer encode of the test solution (S-FLM valid split, prefix match 100%).",
+ "official_fp": {
+  "solved_pct": 86.15,
+  "coarse_code_correct_pct": 85.5,
+  "p_solved_given_coarse_correct": 88.07,
+  "n_correct": 1710,
+  "p_solved_given_coarse_wrong": 74.83,
+  "n_wrong": 290,
+  "true_code_in_topk": {
+   "1": 85.5,
+   "2": 95.65,
+   "3": 98.2,
+   "4": 99.0
+  }
+ },
+ "E3_ternary_ft_5k": {
+  "solved_pct": 71.6,
+  "coarse_code_correct_pct": 76.7,
+  "p_solved_given_coarse_correct": 74.58,
+  "n_correct": 1534,
+  "p_solved_given_coarse_wrong": 61.8,
+  "n_wrong": 466,
+  "true_code_in_topk": {
+   "1": 76.7,
+   "2": 91.65,
+   "3": 96.7,
+   "4": 98.4
+  }
+ },
+ "counterfactual": "Ternary with FP's coarse-code accuracy: 0.855*74.58 + 0.145*61.80 = 72.7% (+1.1 pt). The coarse code explains ~1 of the 14.5 pt gap.",
+ "conclusion": "Hypothesis that the gap comes from the single coarsest decision is refuted. A wrong coarsest code still often yields the correct board (75% FP, 62% ternary): coarse codes are not uniquely decisive. The gap is spread over later levels. Also: the earlier 'FP 95.5% coarse TF accuracy' was measured on holdout_seqs, which are part of the official FP model's training data (biased); on test FP gets 85.5%.",
+ "note": "Transcribed from pasted Colab output. Single seed."
+}

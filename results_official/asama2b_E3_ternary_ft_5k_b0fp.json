@@ -1,0 +1,19 @@
+{
+ "experiment": "E3_ternary_ft_5k_b0fp",
+ "description": "E3-long recipe (seed 0, 5000 steps x 256, lr 1e-4 -> 1e-5, alpha=0, CE only, INT8 act) but the 4 linears of block 0 (attn.c_attn, attn.c_proj, mlp.c_fc, mlp.c_proj) kept FP; 28 body linears ternary; io FP. Motivated by the PTQ mechanism diag (block 0 most sensitive to ternarization).",
+ "test_full": {"solved_pct": 71.30, "cell_pct": 96.29, "n": 2000},
+ "reference_E3_long_3seeds": {"mean": 71.15, "sample_std": 0.40},
+ "reference_official_fp_A100": 86.15,
+ "during_training": {
+  "1000": {"holdout_tf_loss": 0.2338, "test_subset_256": 65.63},
+  "2000": {"holdout_tf_loss": 0.2196, "test_subset_256": 68.75},
+  "3000": {"holdout_tf_loss": 0.2116, "test_subset_256": 71.88},
+  "4000": {"holdout_tf_loss": 0.2050, "test_subset_256": 71.09},
+  "5000": {"holdout_tf_loss": 0.2042, "test_subset_256": 69.53}
+ },
+ "holdout_tf_acc_per_level_final": [0.8145, 0.9736, 0.9053, 0.9316, 1.0, 0.9168, 0.9054, 0.8939, 0.9013, 0.8823, 0.8799, 0.9818],
+ "wall_clock_min": 218.9,
+ "wall_clock_note": "About 4x slower than the earlier A100 runs (~55 min); GPU type for this session was not recorded.",
+ "conclusion": "No gain: 71.30 is within 0.4 std of the 3-seed mean 71.15. Block 0 is the most sensitive block for PTQ, but after QAT it is not the bottleneck; the residual gap to FP is spread across the network (general capacity loss). Single seed.",
+ "note": "Transcribed from pasted Colab log."
+}

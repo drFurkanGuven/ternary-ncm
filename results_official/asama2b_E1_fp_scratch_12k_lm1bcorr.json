@@ -1,0 +1,64 @@
+{
+ "_source": "Colab \u00e7\u0131kt\u0131s\u0131 (kullan\u0131c\u0131n\u0131n yap\u0131\u015ft\u0131rd\u0131\u011f\u0131 log), 9d-UZUN h\u00fccresi, A100, 2026-11-15",
+ "setup": {
+  "start": "rastgele",
+  "weights": "FP",
+  "steps": 12000,
+  "batch_size": 256,
+  "warmup": 500,
+  "alpha": 0.0,
+  "corruption": {
+   "mode": "random_uniform (dizi ba\u015f\u0131na r~U(0,1))",
+   "skip_level0": true,
+   "kaynak": "resm\u00ee config/eval/lm1b-*.yaml code_corruption blo\u011funun bizim yorumumuz"
+  },
+  "seed": 0,
+  "wall_clock_min": 110.5
+ },
+ "final_test_full": {
+  "solved_pct": 18.35,
+  "n": 2000
+ },
+ "memorization_check": {
+  "train_first500_solved_pct": 99.8,
+  "test_first500_solved_pct": 20.4
+ },
+ "same_budget_linear_corruption_E1_long": {
+  "solved_pct": 25.65,
+  "train500": 98.6,
+  "test500": 24.8
+ },
+ "evals": [
+  {
+   "step": 2000,
+   "holdout_tf_loss": 0.2927742302417755,
+   "test_first256_solved_pct": 9.375
+  },
+  {
+   "step": 4000,
+   "holdout_tf_loss": 0.22459501028060913,
+   "test_first256_solved_pct": 14.453125
+  },
+  {
+   "step": 6000,
+   "holdout_tf_loss": 0.22207117080688477,
+   "test_first256_solved_pct": 20.703125
+  },
+  {
+   "step": 8000,
+   "holdout_tf_loss": 0.24431711435317993,
+   "test_first256_solved_pct": 21.875
+  },
+  {
+   "step": 10000,
+   "holdout_tf_loss": 0.25215423107147217,
+   "test_first256_solved_pct": 19.921875
+  },
+  {
+   "step": 12000,
+   "holdout_tf_loss": 0.2722890377044678,
+   "test_first256_solved_pct": 18.359375
+  }
+ ],
+ "conclusion": "Daha k\u00f6t\u00fc (\u22127.3 puan) ve ezber s\u00fcr\u00fcyor. Temiz girdili holdout TF kayb\u0131 \u00e7ok daha d\u00fc\u015f\u00fck olmas\u0131na ra\u011fmen \u00e7\u00f6zme oran\u0131 d\u00fc\u015f\u00fck \u2192 TF kayb\u0131 \u00fcretim kalitesinin iyi bir g\u00f6stergesi de\u011fil."
+}

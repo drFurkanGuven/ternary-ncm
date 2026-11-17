@@ -1,0 +1,15 @@
+cff-version: 1.2.0
+message: "If you use this work, please cite it as below."
+title: "Ternary NCM: Next-Concept Modeling with BitNet b1.58 weights"
+authors:
+  - family-names: "Güven"
+    given-names: "Furkan"
+type: software
+license: MIT
+repository-code: "https://github.com/drFurkanGuven/ternary-ncm"
+date-released: "2026-11-17"
+keywords:
+  - ternary quantization
+  - BitNet b1.58
+  - next-concept modeling
+  - quantization-aware training

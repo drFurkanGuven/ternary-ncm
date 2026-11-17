@@ -1,0 +1,16 @@
+{
+ "experiment": "E3_ternary_ft_5k seed repeats",
+ "description": "E3-long recipe (official FP ckpt -> body ternary + INT8 act, io FP, alpha=0, CE only, 5000 steps x 256, lr 1e-4 -> 1e-5) with seeds 0, 1, 2. Seed changes data order and conditioning corruption; start weights identical.",
+ "gpu": "A100",
+ "test_full_solved_pct": {"seed0": 71.60, "seed1": 70.85, "seed2": 71.00},
+ "mean": 71.15, "sample_std": 0.40, "range": [70.85, 71.60],
+ "fraction_of_fp": 0.826,
+ "reference_official_fp_A100": 86.15,
+ "during_training_test_subset_256": {
+  "seed1": {"1000": 67.58, "2000": 67.19, "3000": 69.53, "4000": 73.05, "5000": 71.09},
+  "seed2": {"1000": 65.23, "2000": 69.14, "3000": 71.88, "4000": 71.09, "5000": 69.14}
+ },
+ "holdout_tf_loss_final": {"seed1": 0.2047, "seed2": 0.2084},
+ "implications": "Seed std 0.4 pt. Single-seed variants: per-channel 71.80 and A16 71.05 lie within ~2 std of the mean (no effect); alpha=1 69.05 is ~5 std below (worse).",
+ "note": "Transcribed from pasted Colab log."
+}

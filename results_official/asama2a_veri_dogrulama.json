@@ -1,0 +1,16 @@
+{
+ "_source": "colab/ncm_asama2a_veri.ipynb \u00e7\u0131kt\u0131s\u0131 (Colab TPU-VM CPU, 44 \u00e7ekirdek, 8.2 dk); veri dosyas\u0131 Drive MyDrive/ncm_ptq/sudoku_hard_sflm_seed42.npz",
+ "generator": "github.com/jdeschena/s-flm sudoku_generator.py @ 30def79976ca3b1cdcb5fcbfa0165524e44001de (Apache-2.0)",
+ "generator_sha256": "c6a842526132ec96bf3098bec66d6e54780dad16cb7fb73481a81b88e97e6779",
+ "difficulty": "hard",
+ "clues_min_max": [
+  30,
+  30
+ ],
+ "seed": 42,
+ "n_train": 48000,
+ "n_valid": 2000,
+ "ncm_test_in_sflm_valid": "2000/2000",
+ "same_order": true,
+ "ncm_test_in_train": "0/2000"
+}

@@ -1,0 +1,8 @@
+{
+ "_source": "Drive MyDrive/ncm_ptq/qat/official_fp_test.json (colab/ncm_asama2b_qat.ipynb, Colab A100-80GB, 2026-11-15)",
+ "note": "Ayn\u0131 checkpoint T4'te 86.30 verdi (A\u015fama 0); fark GPU'ya ba\u011fl\u0131 say\u0131sal farklardan (2000'de 3 bulmaca). A100 deneyleri bu de\u011ferle k\u0131yaslan\u0131r.",
+ "solved_pct": 86.15,
+ "cell_pct": 98.35308641975308,
+ "valid_pct": 86.15,
+ "n": 2000
+}
