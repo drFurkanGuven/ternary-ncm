@@ -4,6 +4,8 @@ title: "Ternary NCM: Next-Concept Modeling with BitNet b1.58 weights"
 authors:
   - family-names: "Güven"
     given-names: "Furkan"
+    affiliation: "Fırat University"
+    email: "240600205@firat.edu.tr"
 type: software
 license: MIT
 repository-code: "https://github.com/drFurkanGuven/ternary-ncm"
