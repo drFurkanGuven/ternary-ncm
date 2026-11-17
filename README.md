@@ -1,5 +1,7 @@
 # Ternary NCM: Next-Concept Modeling with BitNet b1.58 weights
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24322640.svg)](https://doi.org/10.5281/zenodo.24322640)
+
 Can a coarse-to-fine text generator run on ternary weights {−1, 0, +1}? This repository tests that on
 [Next-Concept Modeling (NCM)](https://arxiv.org/abs/2610.14162) using the **official NCM code and Sudoku-hard
 checkpoint** ([HazyResearch/ncm](https://github.com/HazyResearch/ncm) @ `c7027427`) and
@@ -119,7 +121,21 @@ If you use this work, please cite the paper:
 }
 ```
 
-Machine-readable metadata: [CITATION.cff](CITATION.cff). Zenodo DOIs will be added here after the first release.
+For the code, cite the archived software (Zenodo; this DOI always resolves to the latest version, v1.0.0 is
+[10.5281/zenodo.24322641](https://doi.org/10.5281/zenodo.24322641)):
+
+```bibtex
+@software{guven2026ternaryncm_code,
+  title   = {Ternary NCM: code and results for ternary (BitNet b1.58) quantization of Next-Concept Models},
+  author  = {G{\"u}ven, Furkan},
+  year    = {2026},
+  version = {1.0.0},
+  doi     = {10.5281/zenodo.24322640},
+  url     = {https://doi.org/10.5281/zenodo.24322640}
+}
+```
+
+Machine-readable metadata: [CITATION.cff](CITATION.cff).
 
 ## License
 

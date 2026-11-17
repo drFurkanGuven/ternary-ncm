@@ -17,8 +17,14 @@ date-released: "2026-11-17"
 license: MIT
 repository-code: "https://github.com/drFurkanGuven/ternary-ncm"
 url: "https://github.com/drFurkanGuven/ternary-ncm"
-# After Zenodo mints the DOIs, add:
-# doi: "10.5281/zenodo.NNNNNNN"
+doi: "10.5281/zenodo.24322640"
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.24322640"
+    description: "Concept DOI for all versions of this software (Zenodo)"
+  - type: doi
+    value: "10.5281/zenodo.24322641"
+    description: "Version DOI for v1.0.0 (Zenodo)"
 keywords:
   - ternary quantization
   - BitNet b1.58
