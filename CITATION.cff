@@ -1,12 +1,17 @@
 cff-version: 1.2.0
-message: "If you use this work, please cite it as below."
-title: "Ternary NCM: Next-Concept Modeling with BitNet b1.58 weights"
+message: "If you use this work, please cite the paper below (preferred-citation) and, for the code, this repository."
+title: "Ternary NCM: code and results for ternary (BitNet b1.58) quantization of Next-Concept Models"
+abstract: >-
+  Code, logs and verified results for ternary (BitNet b1.58-style) quantization of the official
+  Next-Concept Modeling (NCM) Sudoku-hard checkpoint: post-training ternarization collapses to 0% solved,
+  while quantization-aware fine-tuning recovers 71.15 ± 0.40% (82.6% of full precision).
 authors:
   - family-names: "Güven"
     given-names: "Furkan"
     affiliation: "Fırat University"
     email: "240600205@firat.edu.tr"
 type: software
+version: "1.0.0"
 license: MIT
 repository-code: "https://github.com/drFurkanGuven/ternary-ncm"
 date-released: "2026-11-17"
@@ -15,3 +20,14 @@ keywords:
   - BitNet b1.58
   - next-concept modeling
   - quantization-aware training
+  - post-training quantization
+preferred-citation:
+  type: unpublished
+  title: "Can Coarse-to-Fine Text Generators Run on Ternary Weights? Post-Training Ternarization of Next-Concept Models Collapses; Quantization-Aware Fine-Tuning Recovers 83%"
+  authors:
+    - family-names: "Güven"
+      given-names: "Furkan"
+      affiliation: "Fırat University"
+  year: 2026
+  month: 11
+  url: "https://github.com/drFurkanGuven/ternary-ncm"
