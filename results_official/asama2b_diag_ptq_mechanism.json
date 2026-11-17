@@ -1,4 +1,6 @@
 {
+ "_wording_note": "Conclusions were written at run time. The paper (v1.0) uses calibrated wording: the collapse is consistent with error magnitude alone; the ~0.44 floor applies to elementwise ternary rounding of Gaussian weights; calibration-based PTQ was not tested; the gap is not concentrated in the coarsest code (later levels not localized further).",
+ "_source": "colab/ncm_asama2b_qat.ipynb section 11, Colab A100; values copied from the cell output",
  "experiment": "diag_ptq_mechanism",
  "description": "Official FP Sudoku-hard checkpoint, measurement only. A: body (32 layers) perturbed by INT8/4/3, ternary, or Gaussian noise with matched per-layer relative Frobenius error (first 500 test puzzles). B: ternary (absmean per-tensor) applied to single layers / blocks / first-k / last-k blocks (first 256 test puzzles). Notebook ncm_asama2b_qat.ipynb section 11, module colab/ncm_diag.py.",
  "gpu": "A100",

@@ -35,13 +35,13 @@ cells = [
 **Önerilen sıra:** 1–6 (kontroller) → E3 → E1 ve E2. E3 en kısa süren ve tek başına en bilgilendirici deney.
 
 **Neyi FP bırakıyoruz:** Giriş izdüşümü (`wte`) ve seviye çıkış katmanları (`lm_heads`), yani lineer parametrelerin
-yaklaşık %0.9'u. BitNet'in gömme/çıkış katmanlarını FP tutma pratiğiyle uyumlu; PTQ taramasında en hassas çıkan
-katmanlar da bunlar. Ternary katmanlarda aktivasyonlar token başına INT8'e kuantalanır.
+yaklaşık %0.9'u. BitNet'in gömme/çıkış katmanlarını FP tutma pratiğiyle uyumlu; PTQ teşhisinde giriş izdüşümü
+(`wte`) en hassas katman çıktı; çıkış katmanları tek tek ternary yapılınca zararsız (≈%85). Ternary katmanlarda aktivasyonlar token başına INT8'e kuantalanır.
 
 **Varsayımlarımız (makalede Sudoku için verilmeyen ayarlar):** koşullandırma bozma ortalama 0.5 (seviyeler boyunca
 0.75'ten 0.25'e doğrusal azalan), kayıp ağırlığı α = 0. E1 bu varsayımların makul olup olmadığını gösterir.
 
-**Çalışma zamanı:** GPU (T4 yeterli, L4/A100 daha hızlı). Checkpoint'ler Drive'a yazılır; oturum koparsa aynı
+**Çalışma zamanı:** GPU (A100 önerilir; T4'te çalışır ama çok yavaştır). Checkpoint'ler Drive'a yazılır; oturum koparsa aynı
 hücreyi tekrar çalıştırınca kaldığı adımdan devam eder.
 """),
     md("## 1. GPU, Drive ve yollar"),
@@ -64,6 +64,7 @@ assert os.path.exists(DATA_NPZ), 'Önce Aşama 2a notebook\\'unu çalıştır'
 !git checkout -q {NCM_COMMIT} && git rev-parse HEAD
 !pip install -q omegaconf hydra-core "transformers>=4.51" regex
 !pip install -q -U "huggingface_hub[cli]"
+!pip list 2>/dev/null | grep -iE "^(torch|transformers|numpy|omegaconf|hydra-core|huggingface.hub) " | tee /content/drive/MyDrive/ncm_ptq/env_versions.txt
 !hf download hazyresearch/ncm-checkpoints --include "sudoku/hard/*" --local-dir artifacts
 !hf download hazyresearch/ncm-datasets --repo-type dataset --include "sudoku/hard/*" --local-dir data
 """),
@@ -306,7 +307,7 @@ del net, teacher; torch.cuda.empty_cache()
     md("""## 9f. E3-α1 — en kaba seviyeye daha çok ağırlık (α=1, her seviye eşit pay)
 
 α=0'da tek kodluk en kaba seviyenin kayıptaki payı 1/322 ≈ %0,3; α=1'de her seviye 1/12 ≈ %8,3 alır (makale Denk. 10).
-E3'ün takıldığı yer en kaba seviye (TF doğruluğu ≈%81, FP %95,5). Diğer her şey 9e ile aynı; USE_KD=False ise damıtma
+Hipotez: E3'ün takıldığı yer en kaba seviye (holdout TF doğruluğu ≈%81; testte en kaba kod doğruluğu E3 %76,7, FP %85,5). Diğer her şey 9e ile aynı; USE_KD=False ise damıtma
 kapalı ve doğrudan E3-uzun (%71,60) ile karşılaştırılır."""),
     code("""
 USE_KD = True    # 9e (E3-KD) işe yaradıysa True bırak; yaramadıysa False yap
@@ -329,7 +330,7 @@ del net, teacher; torch.cuda.empty_cache()
     md("""## 9g. E3-A16 — ternary ağırlık, INT8 aktivasyon KAPALI (W1.58A16)
 
 E3-uzun ile birebir aynı tarif (α=0, damıtma yok, 5.000 adım); tek fark act_int8=False. Amaç: en kaba seviyedeki
-açığın (TF ≈%80, FP %95,5) ternary ağırlıktan mı INT8 aktivasyondan mı geldiğini ayırmak. Karşılaştırma: %71.60."""),
+açığın (testte en kaba kod doğruluğu E3 %76,7, FP %85,5) ternary ağırlıktan mı INT8 aktivasyondan mı geldiğini ayırmak. Karşılaştırma: %71.60."""),
     code("""
 torch.manual_seed(0)
 _, tk, net = Q.load_official(**NCM)
@@ -467,7 +468,7 @@ for SEED in (1, 2):
     md("""## 13. E3-B0FP — blok 0 FP, kalan 28 gövde katmanı ternary (≈55 dk, A100)
 
 **Gerekenler:** 1–4. bölümler. E3-uzun (seed 0) tarifi; tek fark blok 0'ın 4 doğrusal katmanının FP kalması
-(PTQ teşhisinde en hassas blok). Sonuç: %71.30 (3 seed ortalaması 71.15 ± 0.40 ile aynı)."""),
+(PTQ teşhisinde en hassas blok). Sonuç: %71.30 (3 seed ortalaması 71.15 ± 0.40 ile fark gürültü içinde). Kayıtlı koşu 219 dk sürdü (GPU türü kaydedilmedi)."""),
     code("""
 import os, json, torch, torch.nn as nn
 if 'BATCH' not in globals():

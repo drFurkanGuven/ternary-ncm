@@ -47,8 +47,10 @@ print('Sonuçlar:', OUT_DIR)
 %cd /content
 !test -d ncm || git clone https://github.com/HazyResearch/ncm.git
 %cd /content/ncm
+!git checkout -q c70274273f489abc73832b2b98584a8483b6b203
 !git rev-parse HEAD > {OUT_DIR}/ncm_commit.txt && cat {OUT_DIR}/ncm_commit.txt
 !pip install -q -U omegaconf hydra-core "transformers>=4.51" "huggingface_hub[cli]" regex rouge_score sacrebleu
+!pip list 2>/dev/null | grep -iE "^(torch|transformers|numpy|omegaconf|hydra-core|huggingface.hub) " | tee /content/drive/MyDrive/ncm_ptq/env_versions.txt
 !hf download hazyresearch/ncm-checkpoints --include "sudoku/hard/*" --local-dir artifacts
 !hf download hazyresearch/ncm-datasets --repo-type dataset --include "sudoku/hard/*" --local-dir data
 !ls -la artifacts/sudoku/hard data/sudoku/hard

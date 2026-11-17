@@ -18,17 +18,23 @@ NCM makalesindeki kurulumla birebir aynı.
 | Resmî NCM, FP | **86.30** (T4) / **86.15** (A100) | Makale: 86.1 |
 | PTQ, INT8 ağırlık | 86.10 | Kayıpsız |
 | PTQ, INT4 ağırlık | 81.90 | −4.4 puan |
-| PTQ, ternary (her varyant) | **0.00** | Tam çöküş. Neden: model ≈0.3 göreli ağırlık hatasına dayanıyor, en iyi ternary bile ≈0.44 hata veriyor |
+| PTQ, ternary (denenen her varyant) | **0.00** | Tam çöküş; hata büyüklüğüyle tutarlı: model ≈0.28 göreli ağırlık hatasında %50'ye, ≈0.35'te %0'a düşüyor; Gauss ağırlıklarda en iyi eleman bazlı ternary yuvarlama bile ≈0.44 hata veriyor (kalibrasyonlu ternary PTQ denenmedi) |
 | **QAT ince ayar (E3)**, ternary gövde, FP checkpoint'ten, 1.500 adım | **69.70** | 15 dk (A100); hâlâ yükseliyordu |
 | QAT ince ayar (E3-uzun), aynı tarif, 5.000 adım | **71.15 ± 0.40** (3 seed: 71.60 / 70.85 / 71.00) | 55 dk (A100); 2.000. adımdan sonra düzleşiyor; FP'nin %82.6'sı |
-| E3, 5.000 adım, α=1 (en kaba seviyeye daha çok kayıp ağırlığı) | 69.05 | α=0'dan kötü |
-| E3, 5.000 adım, INT8 aktivasyon kapalı (W1.58A16) | 71.05 | A8 ile aynı: INT8 aktivasyon bedava |
+| E3, 5.000 adım, α=1 (en kaba seviyeye daha çok kayıp ağırlığı) | 69.05 | α=0'dan kötü (−2.1 puan; gürültü aralığının dışında) |
+| E3, 5.000 adım, INT8 aktivasyon kapalı (W1.58A16) | 71.05 | A8 ile fark gürültü içinde: INT8 aktivasyonun ölçülebilir bir bedeli yok |
 | E3, 5.000 adım, kanal başına ternary ölçek | 71.80 | Tensör başına ölçekle aynı (fark gürültü içinde) |
-| E3, 5.000 adım, blok 0 FP (28 gövde katmanı ternary) | 71.30 | Kazanç yok: PTQ'da en hassas blok, QAT sonrası darboğaz değil |
+| E3, FP öğretmenden damıtma + kademeli kuantalama | — | 2.000. adımda durduruldu; 1.000/2.000. adımda E3-uzun ile aynı (ilk 256 test) |
+| E3, 5.000 adım, blok 0 FP (28 gövde katmanı ternary) | 71.30 | Fark gürültü içinde: PTQ'da en hassas blok, QAT sonrası açığın belirgin kaynağı değil |
 | Baştan eğitim, FP (E1), 4.000 adım (makale bütçesinin ≈%2'si) | 21.75 | 34 dk (A100); kısa bütçe referansı |
 | Baştan eğitim, ternary (E2), aynı bütçe | 16.45 | 40 dk (A100); aynı bütçede FP'nin ≈%76'sı |
 | Baştan eğitim, FP, 12.000 adım (E1-uzun) | 25.65 | 110 dk; holdout kaybı 6.000. adımdan sonra yükseliyor |
 | Baştan eğitim, ternary, 12.000 adım (E2-uzun) | 22.75 | 132 dk; FP'nin ≈%89'u; holdout kaybı yükselmiyor |
+| Baştan eğitim, FP, 12.000 adım, LM1B tarzı rastgele oranlı bozma | 18.35 | Doğrusal bozmadan kötü; ezber sürüyor |
+
+Kalan açık en kaba kodda toplanmıyor: ternary modele FP'nin en kaba kod doğruluğu verilseydi ≈%72.7 olurdu
+(+1.1 puan; 14.6 puanlık açığın ≈1 puanı). Açığın geri kalanı sonraki seviyelerden geliyor ve daha ayrıntılı
+yerelleştirilmedi.
 
 Ayrıntılar, varsayımlar ve sınırlar: [BULGULAR.md](BULGULAR.md). Ham sonuçlar: [results_official/](../results_official/).
 

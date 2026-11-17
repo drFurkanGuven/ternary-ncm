@@ -1,4 +1,5 @@
 {
+ "_source": "colab/ncm_asama2b_qat.ipynb section 9g, Colab A100; values copied from the cell output",
  "experiment": "E3_ternary_ft_5k_a16",
  "description": "Same as E3_ternary_ft_5k (alpha=0, CE only, 5000 steps) but INT8 activation quantization OFF (W1.58A16).",
  "gpu": "A100",

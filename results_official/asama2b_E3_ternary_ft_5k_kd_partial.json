@@ -1,4 +1,5 @@
 {
+ "_source": "colab/ncm_asama2b_qat.ipynb section 9e, Colab A100 (stopped at step 2000); values copied from the cell output",
  "experiment": "E3_ternary_ft_5k_kd (stopped at step 2000)",
  "description": "E3 + KD from frozen official FP teacher (loss = 0.5 CE + 0.5 KL, T=1, alpha=0 weights) + quant lambda warmup 0->1 over 500 steps. Stopped by us at step 2000 (no gain vs E3_ternary_ft_5k); checkpoint at step 2000 in Drive.",
  "gpu": "A100",

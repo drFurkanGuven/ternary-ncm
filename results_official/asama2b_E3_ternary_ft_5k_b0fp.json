@@ -1,4 +1,5 @@
 {
+ "_source": "colab/ncm_asama2b_qat.ipynb section 13, Colab GPU (type not recorded); values copied from the cell output",
  "experiment": "E3_ternary_ft_5k_b0fp",
  "description": "E3-long recipe (seed 0, 5000 steps x 256, lr 1e-4 -> 1e-5, alpha=0, CE only, INT8 act) but the 4 linears of block 0 (attn.c_attn, attn.c_proj, mlp.c_fc, mlp.c_proj) kept FP; 28 body linears ternary; io FP. Motivated by the PTQ mechanism diag (block 0 most sensitive to ternarization).",
  "test_full": {"solved_pct": 71.30, "cell_pct": 96.29, "n": 2000},

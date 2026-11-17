@@ -1,4 +1,5 @@
 {
+ "_source": "colab/ncm_asama2b_qat.ipynb section 12 (SEED=0), Colab A100; values copied from the cell output",
  "experiment": "E3_ternary_ft_5k",
  "description": "Ternary QAT finetune from official FP checkpoint; body ternary (absmean, STE) + INT8 per-token activations, io FP; 5000 steps x 256, lr 1e-4 -> 1e-5 cosine, warmup 100; CE only",
  "gpu": "A100",
@@ -32,5 +33,5 @@
   "4000": 0.8184,
   "5000": 0.8125
  },
- "note": "Values transcribed from the Colab log pasted by the user; full JSON in Drive MyDrive/ncm_ptq/qat/E3_5k_result.json. Single seed."
+ "note": "Values transcribed from the Colab cell output log; full JSON in Drive MyDrive/ncm_ptq/qat/E3_5k_result.json. Single seed."
 }

@@ -1,4 +1,5 @@
 {
+ "_source": "colab/ncm_asama2b_qat.ipynb section 9h, Colab A100; values copied from the cell output",
  "experiment": "E3_ternary_ft_5k_pc",
  "description": "Same as E3_ternary_ft_5k (alpha=0, CE only, 5000 steps, body ternary + INT8 per-token activations, io FP) but per-channel ternary scale: W ~ diag(gamma) T, gamma = mean|w| per output row.",
  "gpu": "A100",

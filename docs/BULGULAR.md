@@ -1,6 +1,6 @@
 # Araştırma günlüğü — Ternary NCM
 
-Son güncelleme: 15 Kasım 2026. Her bulgunun yanında kanıtın nerede olduğu yazılıdır. "Doğrulandı" yalnızca
+Son güncelleme: 17 Kasım 2026. Her bulgunun yanında kanıtın nerede olduğu yazılıdır. "Doğrulandı" yalnızca
 resmî NCM kodu/checkpoint'i üzerinde, açıkça kontrol edilmiş sonuçlar için kullanılır.
 
 ## 1. Doğrulanan bulgular (resmî NCM, Sudoku-hard)
@@ -22,14 +22,15 @@ resmî NCM kodu/checkpoint'i üzerinde, açıkça kontrol edilmiş sonuçlar iç
 - Kanıt: `results_official/asama1_ptq_sudoku_hard.json`.
 
 **Çöküşün mekanizması (2026-11-15, yalnızca ölçüm; `results_official/asama2b_diag_ptq_mechanism.json`):**
-- **Belirleyici olan hatanın büyüklüğü, ternary'nin kendisi değil.** Gövdeye aynı göreli hatada (‖ΔW‖/‖W‖) rastgele
+- **Çöküş yalnızca hatanın büyüklüğüyle tutarlı; ternary yapısını ayrıca suçlamaya gerek yok** (gürültü eğrisi 0.35'te zaten %0 olduğu için ölçülen ternary hatalarında ikisini ayıramıyor; eşleşen kanıt tamsayı kuantalayıcılar). Gövdeye aynı göreli hatada (‖ΔW‖/‖W‖) rastgele
   Gauss gürültüsü eklemek kuantalamayla aynı etkiyi yapıyor: INT4 (0.19) %83.4 / gürültü 0.20 %80.8; INT3 (0.42) ve
   gürültü 0.40 ikisi de %0 (ilk 500 test).
 - **Tolerans eşiği:** %50 çözüm ≈0.28 göreli hatada; ≥0.35'te ≈%0. Gauss ağırlıklar için *en iyi* ternary bile
-  ≈0.44 hata veriyor (sayısal hesap; gerçek ağırlıklarda 0.47–0.56). Yani bu modelde katman başına hiçbir ternary
-  PTQ yöntemi başarılı olamaz: alt sınır eşiğin çok üstünde.
-- **Hata seviyeler boyunca çığ gibi büyümüyor.** Ternary'de doğru önceki kodlar verildiğinde bile (teacher forcing)
-  her seviyenin doğruluğu ≈0.1; üretim doğruluğuna çok yakın. 500 bulmacanın 446'sı daha seviye 0'da FP'den ayrılıyor.
+  ≈0.44 hata veriyor (sayısal hesap; gerçek ağırlıklarda 0.465–0.568). Yani yalnızca ağırlık hatasını küçülten
+  eleman bazlı ternary yuvarlama bu modelde başarılı olamaz: alt sınır eşiğin çok üstünde. Katman çıktısı hatasını
+  küçülten kalibrasyonlu PTQ (GPTQ, PT²-LLM gibi) bu argümanla sınırlanmıyor ve denenmedi.
+- **Çöküşü açıklamak için seviyeler arası çığa gerek yok.** Ternary'de doğru önceki kodlar verildiğinde bile (teacher forcing)
+  seviye 0–10'un doğruluğu 0.08–0.18 (neredeyse belirleyici seviye 1 ve 4 hariç: ternary 0.91 / 1.0, FP 0.99 / 1.0), en ince seviyede 0.43; üretim doğruluğuna yakın. 500 bulmacanın 446'sı daha seviye 0'da FP'den ayrılıyor.
   Hasar transformer'ın içinde, derinlikle birikiyor: gizli durum sapması blok 0'dan sonra 0.37, blok 7'den sonra 1.01.
 - **Hassasiyet girişte toplanıyor.** Yalnızca `wte` (giriş izdüşümü) ya da yalnızca blok 0'ın dikkat katmanları ternary
   olunca %0. Blok 0 tek başına %0, blok 1 %24.6, blok 2–7 tek tek %70–77. **Düzeltme:** yukarıdaki "yalnızca 13
@@ -61,7 +62,7 @@ resmî NCM kodu/checkpoint'i üzerinde, açıkça kontrol edilmiş sonuçlar iç
 - Kanıt: `results_official/asama2b_E3_ternary_ft.json`.
 - **E3-uzun (5.000 adım, 55 dk A100): 71.60%** (FP'nin ≈%83'ü). 3,3 kat daha fazla adım yalnızca +1,9 puan getirdi:
   ilk 256 testte 2.000. adımdan sonra 69.5%'te düzleşti (5.000'de 71.1%), oysa holdout TF kaybı 0.225 → 0.204 düşmeye
-  devam etti. En kaba seviyenin TF doğruluğu ≈%81'de takıldı (FP %95.5). Sonuç: yalnızca CE ile adım artırmak
+  devam etti. En kaba seviyenin TF doğruluğu ≈%81'de takıldı (FP %95.5; **düzeltme:** bu FP değeri yanlı, bkz. yukarıdaki not; 3 seed ile kazanç +1.2–1.9 puan, ortalamada +1.45). Sonuç: yalnızca CE ile adım artırmak
   yetmiyor; tarif değişikliği gerekiyor (sıradaki: FP öğretmenden damıtma + kademeli kuantalama, §9e).
   Kanıt: `results_official/asama2b_E3_ternary_ft_5k.json`.
 - **E3-KD (FP öğretmenden damıtma + kademeli kuantalama), 2.000. adımda durduruldu:** ilk 256 testte %66,8 / %68,8
@@ -73,28 +74,28 @@ resmî NCM kodu/checkpoint'i üzerinde, açıkça kontrol edilmiş sonuçlar iç
   kayıp ağırlığından değil; ternary modelin o kararı verme kapasitesinden (ya da INT8 aktivasyondan) kaynaklanıyor
   olabilir. Kanıt: `results_official/asama2b_E3_ternary_ft_5k_alpha1.json`. Tek seed.
 - **E3-A16 (INT8 aktivasyon kapalı, W1.58A16): 71.05%** (W1.58A8: 71.60%) → fark gürültü içinde; kayıp eğrileri
-  üst üste. INT8 aktivasyon bu modelde bedava; FP'ye kalan açık ternary ağırlıklardan geliyor. Sıradaki: kanal başına
+  üst üste. INT8 aktivasyonun bu modelde ölçülebilir bir bedeli yok; FP'ye kalan açık ternary ağırlıklardan geliyor. Sıradaki: kanal başına
   ternary ölçek (W ≈ diag(γ)·T, §9h) ve açığın en kaba koda ayrıştırılması (teşhis hücresi).
   Kanıt: `results_official/asama2b_E3_ternary_ft_5k_a16.json`.
 - **Açığın en kaba koda ayrıştırılması (tam test, bulmaca bazında): hipotez çürüdü.**
   FP: kaba kod doğru %85.5; P(çözüldü | doğru) %88.1, P(çözüldü | yanlış) %74.8. E3: kaba kod doğru %76.7;
   P(çözüldü | doğru) %74.6, P(çözüldü | yanlış) %61.8. Yanlış kaba kod çoğu zaman yine doğru tahtaya götürüyor
   (kodlar çözümü tek başına belirlemiyor). Ternary'ye FP'nin kaba kod doğruluğunu verseydik ≈%72.7 olurdu (+1.1):
-  14.5 puanlık açığın yalnızca ≈1 puanı en kaba koddan. Açık sonraki seviyelere yayılmış, genel bir kapasite kaybı.
-  Bu, α=1 ve damıtma denemelerinin neden işe yaramadığını da açıklıyor. Kanıt:
+  14.5 puanlık açığın yalnızca ≈1 puanı en kaba koddan. Açığın geri kalanı en kaba koddan sonraki seviyelerden geliyor (daha ayrıntılı yerelleştirilmedi); bu, seviyelere yayılmış bir kapasite kaybıyla tutarlı.
+  Bu, α=1 ve damıtma denemelerinin işe yaramamasıyla da tutarlı. Kanıt:
   `results_official/asama2b_diag_coarse_code_decomposition.json`.
 - **E3-PC (kanal başına ternary ölçek, W ≈ diag(γ)·T): 71.80%** (tensör başına: 71.60%). Tek seed'de binom
   standart hatası ≈1 puan; fark gürültü içinde. Holdout TF kaybı biraz düşüyor (0.195 vs 0.204) ama çözülen tahta
   oranı değişmiyor (TF kaybı yine güvenilir bir vekil değil). Sonuç: E3 tarifinde ölçek ayrıntısı, α, damıtma ve
-  INT8 aktivasyon açığı değiştirmiyor; ince ayarla ulaşılan tavan ≈%71–72 (FP'nin ≈%83'ü). Kanıt:
+  INT8 aktivasyon açığı kapatmıyor (α=1 kötüleştiriyor); ince ayarla ulaşılan tavan ≈%71–72 (FP'nin ≈%83'ü). Kanıt:
   `results_official/asama2b_E3_ternary_ft_5k_pc.json`.
 - **E3-uzun seed tekrarı (3 seed): 71.15 ± 0.40** (71.60 / 70.85 / 71.00), FP'nin %82.6'sı. Seed değişkenliği
   küçük. Tek seed'li varyantlar bu aralıkla okunmalı: kanal başına ölçek (71.80) ve A16 (71.05) fark yaratmıyor;
   α=1 (69.05) ortalamanın ≈5 std altında, gerçekten kötü. Kanıt: `results_official/asama2b_E3_ternary_ft_5k_seeds.json`.
 - **E3-B0FP (blok 0'ın 4 katmanı FP, kalan 28 gövde katmanı ternary): 71.30%.** 3 seed ortalaması 71.15 ± 0.40 ile
-  aynı; kazanç yok. Blok 0, PTQ'da ternary'ye en hassas blok olsa da QAT sonrası açığın kaynağı değil: kalan açık ağa
-  yayılmış genel bir kapasite kaybı (kaba kod ayrıştırmasıyla tutarlı). Holdout TF kaybı 0.204 (E3-uzun ile aynı).
-  Not: koşu 219 dk sürdü (önceki A100 koşuları ≈55 dk); GPU türü kaydedilmedi. Tek seed.
+  aynı; kazanç yok. Blok 0, PTQ'da ternary'ye en hassas blok olsa da QAT sonrası açığın belirgin kaynağı değil; kalan açık ağa
+  yayılmış genel bir kapasite kaybıyla tutarlı (kaba kod ayrıştırması da öyle). Holdout TF kaybı 0.204 (E3-uzun ile aynı).
+  Not: koşu 219 dk sürdü (önceki A100 koşuları 43–55 dk); GPU türü kaydedilmedi. Tek seed.
   Kanıt: `results_official/asama2b_E3_ternary_ft_5k_b0fp.json`.
 
 ### 1.6 FP baştan eğitim, kısa bütçe (E1): 21.75%
@@ -165,25 +166,11 @@ resmî NCM kodu/checkpoint'i üzerinde, açıkça kontrol edilmiş sonuçlar iç
 - LM1B bloğu, issue #24'te sorulduğu gibi, belki üretecin değil tokenizer'ın eğitiminde kullanılıyordu.
 - Kanıt: `results_official/asama2b_E1_fp_scratch_12k_lm1bcorr.json`.
 
-## 2. Geçersiz sayılan iddialar (v1, `archive/v1_gemini_prototype/`)
+## 2. Geri çekilen önceki iddialar
 
-> Not: `archive/` klasörü (geçersiz v1 prototipi, taslağı ve paketi) herkese açık repoya yüklenmedi.
-
-Bu iddialar yerel prototipten geliyordu; aşağıdaki nedenlerle kullanılmamalı:
-
-| v1 iddiası | Neden geçersiz |
-|---|---|
-| Fikir C (eşlenik geri besleme) Sudoku çözme oranını 12.9% → 27.3% çıkarıyor | Modelsiz kural enerjisi aynı testte **%100** çözüyor (`archive/.../results/v2_sudoku_fb_modelfree.json`). Kazanç modelden değil, test anında verilen Sudoku kurallarından geliyor; yerel Sudoku çok kolay (12–28 boş hücre). |
-| "NCM-FP16" Sudoku'da %9 çözüyor | O model NCM değil (VQ yok, `DirectCoarseToFineBitNCM`). Gerçek NCM daha zor görevde %86 çözüyor. |
-| AR modeli "çöküyor" (%0.4) | AR ilerideki ipuçlarını göremiyor (nedensel koşullandırma) ve görülen tahtaları ezberliyor. |
-| Fikir B "+4.11%", küresel yansıtma norm küçülmesini önlüyor | Dil verisi Bayes tavanında (yaklaşık %97.6). BitLinear zaten RMSNorm uyguladığı için küreye yansıtmanın matematiksel etkisi yok; fark top-2 kırpmasından ve ayrıca açılan sıcaklık tavlamasından geliyor. |
-| "İlk uçtan uca çarpımsız model", 45–71× enerji | Dikkat, normalizasyon ve ölçekleme çarpma içeriyor; enerji analitik ve dikkat hesabını dışarıda bırakıyor. |
-| 12× hız | AR modelinde KV-cache yok; ternary yalnızca simüle edildiği için saat zamanında FP'den yavaş. |
-| Önerme 1 (%21.88 çöküş "kanıtı"), Önerme 2 | Önerme 1'in kanıtı yok, rakamı sonuç dosyalarında yok. Önerme 2 basit bir gözlem; uygulanan adım RMSNorm Jacobian'ını içermediği için gerçek gradyan değil. |
-| Fikir A (Gram) kontrolle "eşit ya da daha iyi" | Tabloda temel modelden biraz kötü (11.7% vs 12.9%). |
-
-Prototipten **geçerli kalan** gözlemler (yalnızca kolay yerel benchmark için): ayrık tahtalarda AR ezberliyor,
-NCM benzeri model genelleşiyor; ternary prototip FP prototip kadar iyi.
+Bu projeden önce yapılan, yayımlanmamış yerel bir prototipten gelen sonuçlar (Sudoku çözme kazancı, hız, enerji ve
+"çarpımsız model" iddiaları) doğrulanamadığı için geri çekildi. Bu repodaki hiçbir sonuç o prototipe dayanmıyor; tüm
+sayılar resmî NCM kodu ve kontrol noktasıyla üretildi (`results_official/`).
 
 ## 3. Bizim varsaymamız gereken ayarlar (makalede Sudoku için yok)
 
@@ -192,26 +179,26 @@ NCM benzeri model genelleşiyor; ternary prototip FP prototip kadar iyi.
 - Rastgele başlatmada resmî `_init_weights` (N(0, 0.02)); resmî sınıf bunu `__init__` içinde çağırmıyor.
 - Ternary kapsamı: transformer blokları; giriş (`wte`) ve seviye çıkış katmanları (`lm_heads`) FP.
 
-Bu varsayımların etkisini E1 (FP, baştan) ölçecek.
+E1 (FP, baştan) bu varsayımlarla modelin öğrenebildiğini ama %86'yı yeniden üretmediğini gösterdi (ezber; bkz. 1.8).
 
 ## 4. Açık işler
 
 0. **Tarif sorunu (öncelikli):** Mevcut tarifle FP baştan eğitim %26 civarında düzleşiyor. Resmî LM1B config'inde
    okuyan kodu yayımlanmamış bir `code_corruption` bloğu var (`mode: uniform, random_rate: true, low: 0, high: 1,
-   skip_level0: true`; bkz. HazyResearch/ncm issue #24, yazarlardan henüz cevap yok). Bu tarif notebook'ta
-   (9d) test ediliyor; önce 9c teşhisiyle ezber olup olmadığı ölçülüyor. İlgili bağımsız çalışma: Red-fuchs/ncm-modular
+   skip_level0: true`; bkz. HazyResearch/ncm issue #24, yazarlardan henüz cevap yok). Bu tarif (9d)
+   test edildi ve kötüleştirdi (%18.35); 9c teşhisi ezberi doğruladı (bkz. 1.8, 1.10). İlgili bağımsız çalışma: Red-fuchs/ncm-modular
    (MLX; resmî Sudoku sonucunu yeniden üretmemiş, küçük bir görevde sıfırdan NCM, AR'a kaybetmiş).
-1. **Daha uzun bütçe (E1 ve E2):** Kayıp farkı daralıyor; uzun eğitimde kapanıyor mu?
+1. **Daha uzun bütçe (E1 ve E2):** 12.000 adımda yapıldı (bkz. 1.8–1.9); tam bütçede ternary ön eğitim hâlâ açık.
 2. **E3 tavanı:** 5.000 adımda %71.6–71.8; uzun CE, damıtma, α=1, A16 ve kanal başına ölçek açığı kapatmadı.
    Anlaşılan durma kuralı gereği makale yazımına geçiliyor; seed tekrarı (madde 3) makale için gerekli.
-3. **Seed tekrarı:** E3-uzun için 3 seed tamam (71.15 ± 0.40). Varyantlar (PC, A16, α1) ve baştan eğitimler hâlâ tek seed.
+3. **Seed tekrarı:** E3-uzun için 3 seed tamam (71.15 ± 0.40). Varyantlar (PC, A16, α1, B0FP) ve baştan eğitimler hâlâ tek seed.
 4. **Kolay/orta seviye** ve **metin görevleri** (resmî checkpoint'ler mevcut): bulgu Sudoku'ya özgü mü?
-5. **Enerji/bellek:** Ağırlık belleği hesaplanabilir; enerji iddiası yalnızca dikkat hesabı da dahil edilerek ve
+5. **Enerji/bellek:** Ağırlık belleği makalede hesaplandı (gövde 50.3 MB → 5.0–6.3 MB; çıkarımda gereken VQ-VAE kod çözücüsü, kod kitapları ve kodlayıcının token gömmesi hariç); enerji iddiası yalnızca dikkat hesabı da dahil edilerek ve
    "analitik tahmin" olarak verilmeli. Gerçek hız için özel ternary çekirdek gerekir (bu çalışmanın kapsamı dışında).
 
 ## 5. Literatür konumu (özet)
 
-- Kabadan inceye görüntü modellerinde (VAR) yalnızca PTQ çalışılmış; 4 bitin altında kalite bozuluyor (LiteVAR,
+- Kabadan inceye görüntü modellerinde (VAR) yalnızca PTQ çalışılmış; 4 bitte bile, hassas katmanlar yüksek hassasiyette tutulmazsa kalite belirgin bozuluyor (LiteVAR,
   Shift-and-Sum, HGA-Quant, PTQ4ARVG). Diffusion LLM'lerde de yalnızca PTQ var, 2 bitin altı çözülmemiş.
 - Ternary QAT, difüzyon görüntü modellerinde çalışıyor (TerDiT). Native ternary kabadan inceye **metin** üretimi
   için yapılmış bir çalışma bulunamadı (sistematik olmayan tarama; NCM'ye atıf veren çalışmalar ayrıca

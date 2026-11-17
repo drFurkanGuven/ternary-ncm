@@ -1,4 +1,6 @@
 {
+ "_wording_note": "Conclusions were written at run time. The paper (v1.0) uses calibrated wording: the collapse is consistent with error magnitude alone; the ~0.44 floor applies to elementwise ternary rounding of Gaussian weights; calibration-based PTQ was not tested; the gap is not concentrated in the coarsest code (later levels not localized further).",
+ "_source": "standalone Colab cell after section 12 (procedure in paper Section 6), Colab A100; values copied from the cell output",
  "experiment": "coarse_code_decomposition",
  "description": "Per-puzzle generation on the full 2000-puzzle test set; true coarsest code = tokenizer encode of the test solution (S-FLM valid split, prefix match 100%).",
  "official_fp": {

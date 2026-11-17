@@ -5,10 +5,10 @@ __pycache__/
 .DS_Store
 .ipynb_checkpoints/
 
-# invalid v1 prototype (kept locally, not published)
+# local-only material
 archive/
 
-# internal agent briefing note (not for publication)
+# local-only notes
 docs/ternary-ncm-research-ideas-for-agent.md
 
 # model weights / data (downloaded or produced on Colab)

@@ -10,24 +10,32 @@ authors:
     given-names: "Furkan"
     affiliation: "Fırat University"
     email: "240600205@firat.edu.tr"
+    orcid: "https://orcid.org/0009-0003-8708-1914"
 type: software
 version: "1.0.0"
+date-released: "2026-11-17"
 license: MIT
 repository-code: "https://github.com/drFurkanGuven/ternary-ncm"
-date-released: "2026-11-17"
+url: "https://github.com/drFurkanGuven/ternary-ncm"
+# After Zenodo mints the DOIs, add:
+# doi: "10.5281/zenodo.NNNNNNN"
 keywords:
   - ternary quantization
   - BitNet b1.58
   - next-concept modeling
   - quantization-aware training
   - post-training quantization
+  - coarse-to-fine generation
+  - Sudoku
 preferred-citation:
   type: unpublished
+  status: preprint
   title: "Can Coarse-to-Fine Text Generators Run on Ternary Weights? Post-Training Ternarization of Next-Concept Models Collapses; Quantization-Aware Fine-Tuning Recovers 83%"
   authors:
     - family-names: "Güven"
       given-names: "Furkan"
       affiliation: "Fırat University"
+      orcid: "https://orcid.org/0009-0003-8708-1914"
   year: 2026
   month: 11
   url: "https://github.com/drFurkanGuven/ternary-ncm"

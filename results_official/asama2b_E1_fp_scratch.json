@@ -1,5 +1,5 @@
 {
- "_source": "Colab \u00e7\u0131kt\u0131s\u0131 (kullan\u0131c\u0131n\u0131n yap\u0131\u015ft\u0131rd\u0131\u011f\u0131 log), colab/ncm_asama2b_qat.ipynb ad\u0131m 8, A100-80GB, 2026-11-15",
+ "_source": "Colab h\u00fccre \u00e7\u0131kt\u0131s\u0131, colab/ncm_asama2b_qat.ipynb ad\u0131m 8, A100-80GB, 2026-11-15",
  "setup": {
   "start": "rastgele (resm\u00ee _init_weights)",
   "weights": "FP (bf16 karma hassasiyet)",
