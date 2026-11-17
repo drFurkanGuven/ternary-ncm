@@ -1,0 +1,43 @@
+{
+  "title": "Ternary NCM: code and results for ternary (BitNet b1.58) quantization of Next-Concept Models",
+  "upload_type": "software",
+  "description": "<p>Code, logs and verified results for the preprint <em>Can Coarse-to-Fine Text Generators Run on Ternary Weights? Post-Training Ternarization of Next-Concept Models Collapses; Quantization-Aware Fine-Tuning Recovers 83%</em>.</p><p>Using the official Next-Concept Modeling (NCM) code and Sudoku-hard checkpoint, the repository tests BitNet b1.58-style ternary weights with 8-bit activations. Post-training ternarization collapses the model to 0% solved for every variant in our sweep (INT8 is lossless, INT4 loses 4.4 points). Matched-error Gaussian noise shows the collapse is consistent with the magnitude of the weight error alone. Quantization-aware fine-tuning from the full-precision checkpoint recovers 71.15 &plusmn; 0.40% (3 seeds), 82.6% of full precision.</p><p>Contents: Google Colab notebooks and the Python modules they embed (quantizers, NCM training loop, diagnostics), one JSON file per reported result, and the LaTeX source of the paper. NCM code and checkpoints are downloaded from the official repository at run time and are not redistributed. Independent research project; not affiliated with or endorsed by the NCM authors.</p>",
+  "creators": [
+    {
+      "name": "Güven, Furkan",
+      "affiliation": "Fırat University"
+    }
+  ],
+  "license": "MIT",
+  "access_right": "open",
+  "language": "eng",
+  "keywords": [
+    "ternary quantization",
+    "BitNet b1.58",
+    "next-concept modeling",
+    "quantization-aware training",
+    "post-training quantization",
+    "coarse-to-fine generation",
+    "Sudoku"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "arXiv:2610.14162",
+      "relation": "references",
+      "scheme": "arxiv",
+      "resource_type": "publication-preprint"
+    },
+    {
+      "identifier": "arXiv:2402.17764",
+      "relation": "references",
+      "scheme": "arxiv",
+      "resource_type": "publication-preprint"
+    },
+    {
+      "identifier": "https://github.com/HazyResearch/ncm",
+      "relation": "requires",
+      "scheme": "url",
+      "resource_type": "software"
+    }
+  ]
+}
