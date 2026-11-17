@@ -119,8 +119,8 @@ the blocks (\texttt{attn.c\_attn}, \texttt{attn.c\_proj}, \texttt{mlp.c\_fc}, \t
 is frozen and kept in FP throughout.
 
 \paragraph{Data.}
-The NCM paper does not ship a training script. We regenerated the Sudoku-hard data with the S-FLM generator
-\todo{cite S-FLM} (commit \texttt{30def799}, seed 42, 48k train + 2k validation). The 2,000 NCM test puzzles
+The NCM paper does not ship a training script. We regenerated the Sudoku-hard data with the Sudoku generator
+of S-FLM~\citep{deschenaux2026sflm}, which NCM follows for Sudoku (commit \texttt{30def799}, seed 42, 48k train + 2k validation). The 2,000 NCM test puzzles
 are identical, in order, to this validation split, with zero overlap with the training split. We hold out
 1,000 training puzzles for monitoring.
 
@@ -138,7 +138,8 @@ if it clearly exceeds both.
 
 \paragraph{Compute.}
 Single Google Colab GPUs (T4 for the PTQ sweep, A100 for training). One 5,000-step QAT run takes 55 minutes on an
-A100. \todo{one run (E3-B0FP) took 219 min; GPU type not logged}
+A100. One run (block~0 kept FP) took 219 minutes, most likely on a slower GPU type that was not logged; this
+affects only wall-clock time.
 
 % ---------------------------------------------------------------------------------------------------------
 \section{Post-training ternarization collapses}
@@ -443,7 +444,7 @@ For visual autoregressive models with next-scale prediction (VAR~\citep{tian2024
 and degrades below 4--6 bits~\citep{litevar,ptq4arvg}. Diffusion language models have been studied with PTQ
 down to 4 bits~\citep{lin2025dllmquant}. Ternary QAT has been shown for diffusion transformers in
 images~\citep{lu2024terdit}. We are not aware of ternary training or quantization of coarse-to-fine \emph{text}
-generators such as NCM~\citep{kumbong2026ncm}. \todo{re-check for concurrent work before submission}
+generators such as NCM~\citep{kumbong2026ncm} (literature search as of November 2026).
 
 % ---------------------------------------------------------------------------------------------------------
 \section{Limitations}
@@ -473,9 +474,6 @@ next experiments.
 Code (Colab notebooks, quantization and training modules), all logs, and a JSON file for every number in this
 paper are available at \url{https://github.com/drFurkanGuven/ternary-ncm}. External code is pinned to commits (NCM \texttt{c7027427}, S-FLM
 generator \texttt{30def799}).
-
-\paragraph{Acknowledgments.}
-\todo{optional; only name people with their consent}
 
 \bibliographystyle{plainnat}
 \bibliography{refs}
