@@ -44,4 +44,7 @@ preferred-citation:
       orcid: "https://orcid.org/0009-0003-8708-1914"
   year: 2026
   month: 11
-  url: "https://github.com/drFurkanGuven/ternary-ncm"
+  doi: "10.5281/zenodo.24322790"
+  url: "https://doi.org/10.5281/zenodo.24322790"
+  publisher:
+    name: "Zenodo"

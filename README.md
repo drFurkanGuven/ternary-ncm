@@ -1,6 +1,9 @@
 # Ternary NCM: Next-Concept Modeling with BitNet b1.58 weights
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24322640.svg)](https://doi.org/10.5281/zenodo.24322640)
+[![Paper DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24322790.svg)](https://doi.org/10.5281/zenodo.24322790)
+[![Code DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24322640.svg)](https://doi.org/10.5281/zenodo.24322640)
+
+Paper (preprint): [doi:10.5281/zenodo.24322790](https://doi.org/10.5281/zenodo.24322790)
 
 Can a coarse-to-fine text generator run on ternary weights {−1, 0, +1}? This repository tests that on
 [Next-Concept Modeling (NCM)](https://arxiv.org/abs/2610.14162) using the **official NCM code and Sudoku-hard
@@ -116,8 +119,10 @@ If you use this work, please cite the paper:
             of Next-Concept Models Collapses; Quantization-Aware Fine-Tuning Recovers 83\%},
   author = {G{\"u}ven, Furkan},
   year   = {2026},
+  publisher = {Zenodo},
   note   = {Preprint},
-  url    = {https://github.com/drFurkanGuven/ternary-ncm}
+  doi    = {10.5281/zenodo.24322790},
+  url    = {https://doi.org/10.5281/zenodo.24322790}
 }
 ```
 
