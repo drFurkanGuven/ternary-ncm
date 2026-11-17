@@ -1,4 +1,4 @@
-% Ternary NCM — draft v0.1 (2026-11-17)
+% Ternary NCM — draft v0.2 (2026-11-17)
 % Every number in this file comes from results_official/*.json; the source file is noted in a comment
 % next to each table/figure. Compile with pdflatex + bibtex (e.g. on Overleaf).
 \documentclass[11pt]{article}
@@ -29,61 +29,66 @@
 \maketitle
 
 \begin{abstract}
-Next-Concept Modeling (NCM) generates text coarse-to-fine: a multiscale residual VQ tokenizer turns a sequence
-into a hierarchy of discrete codes and a transformer predicts one level per forward pass. We ask whether such a
-model survives BitNet~b1.58-style ternary weights ($\{-1,0,+1\}$) with 8-bit activations. Using the official NCM
-code and Sudoku-hard checkpoint (86.15\% boards solved on our hardware), we find:
-(i)~post-training ternarization collapses the model to \textbf{0\%} for every variant we tried, while INT8 is
-lossless and INT4 loses 4.4 points;
-(ii)~the collapse is explained by the \emph{magnitude} of the weight perturbation, not by its ternary structure:
-isotropic Gaussian noise of the same relative Frobenius error has the same effect, the model tolerates about
-0.28 relative error at 50\% solve rate, and even the best per-layer ternary quantizer of Gaussian weights
-incurs $\approx$0.44, so no per-layer ternary PTQ can succeed here;
-(iii)~quantization-aware fine-tuning from the FP checkpoint, using $\approx$2.5\% of the pretraining sample budget,
-recovers \textbf{71.15\,$\pm$\,0.40\%} (3 seeds), i.e.\ 82.6\% of FP;
-(iv)~five interventions---distillation from the FP teacher, coarse-level loss reweighting, per-channel scales,
-16-bit activations, and keeping the most sensitive block in FP---do not move this ceiling, and a per-puzzle
-decomposition shows the remaining gap is spread across levels rather than concentrated in the coarsest
-decision. INT8 activations are free. We release code, logs and all numbers. \url{https://github.com/drFurkanGuven/ternary-ncm}
+Next-Concept Modeling (NCM) generates text coarse-to-fine: a multiscale residual vector-quantized (VQ) tokenizer
+turns a sequence into a hierarchy of discrete codes, and a transformer predicts one level per forward pass. We ask
+whether such a model survives BitNet~b1.58-style ternary weights ($\{-1,0,+1\}$) with 8-bit activations. Using the
+official NCM code and Sudoku-hard checkpoint (86.15\% of boards solved on an A100), we find that
+(i)~post-training quantization (PTQ) to ternary weights collapses the model to \textbf{0\%} for every variant in our
+sweep, while INT8 is lossless and INT4 loses 4.4 points;
+(ii)~the collapse is consistent with the \emph{magnitude} of the weight perturbation alone: isotropic Gaussian
+noise of matched relative Frobenius error tracks the integer quantizers, the solve rate falls to 50\% at a relative
+error of about 0.28, and even the best elementwise ternary rounding of Gaussian weights incurs $\approx$0.44, so
+ternary rounding that only minimizes weight error cannot succeed here;
+(iii)~quantization-aware fine-tuning from the full-precision (FP) checkpoint, using $\approx$2.5\% of the
+pretraining sample budget, recovers \textbf{71.15\,$\pm$\,0.40\%} (3 seeds), i.e.\ 82.6\% of FP;
+(iv)~none of five interventions (distillation from the FP teacher, coarse-level loss reweighting, per-channel
+scales, 16-bit activations, keeping the most sensitive block in FP) raises this ceiling, and a per-puzzle
+decomposition shows that the remaining gap is not concentrated in the coarsest decision. INT8 activations cost no
+measurable accuracy. Code, logs and all reported numbers are available at
+\url{https://github.com/drFurkanGuven/ternary-ncm}.
 \end{abstract}
 
 % ---------------------------------------------------------------------------------------------------------
 \section{Introduction}
 
-Ternary-weight language models such as BitNet~b1.58~\citep{ma2024era} match full-precision (FP) quality at
-scale when trained from scratch with quantization in the loop, while cutting weight memory by roughly
+Ternary-weight language models such as BitNet~b1.58~\citep{ma2024era,ma2025bitnet2b4t} match full-precision (FP)
+quality at scale when trained from scratch with quantization in the loop, while cutting weight memory by roughly
 $10\times$ and replacing most multiplications with additions. In parallel, non-autoregressive generators have
-become competitive for text. Next-Concept Modeling (NCM)~\citep{kumbong2026ncm} is a recent example: it
-represents a sequence as 12 levels of residual VQ codes and generates each level in a single parallel forward
-pass, reporting 10--31$\times$ faster generation than strong diffusion language models.
+become competitive for text. Next-Concept Modeling (NCM)~\citep{kumbong2026ncm} is a recent example:\footnote{Not
+to be confused with ``next concept prediction'', which refers to language models over latent concept tokens.} it
+represents a sequence as 12 levels of residual vector-quantization (VQ) codes and generates each level in a single
+parallel forward pass, reporting 10--31$\times$ faster generation than strong diffusion language models.
 
-The two ideas address different costs---ternary weights reduce the cost of each forward pass, coarse-to-fine
-generation reduces the number of passes---so combining them is attractive. It is also not obvious that it
-works. In coarse-to-fine models, an error at a coarse level conditions every finer level, and post-training
-quantization (PTQ) of related visual coarse-to-fine models already degrades below 4~bits~\citep{litevar,ptq4arvg}.
-To our knowledge, no prior work trains or quantizes a coarse-to-fine \emph{text} generator to ternary weights.
+The two ideas target different costs: ternary weights make each forward pass cheaper, and coarse-to-fine
+generation needs fewer passes. Combining them is attractive, but it is not obvious that it works. In
+coarse-to-fine models an error at a coarse level conditions every finer level, and post-training quantization
+(PTQ) of the related visual coarse-to-fine model VAR already degrades sharply at 4-bit weights unless sensitive
+layers stay in higher precision~\citep{litevar}, with quantization error concentrated at coarse
+scales~\citep{moon2026shiftsum}. NCM appeared in October 2026, and we are not aware of prior or concurrent work
+that trains or quantizes a coarse-to-fine \emph{text} generator to ternary weights.
 
 We study this question on the one NCM task whose full training data we could reproduce exactly: Sudoku-hard.
-Sudoku has an unambiguous success metric (a board is either valid and matches the solution, or not), the
-official checkpoint is public, and a solved board requires all 81 cells to be right, which makes the task very
+Sudoku has an unambiguous success metric (a board is either valid and matches the solution, or not) and a public
+official checkpoint. Because a board counts as solved only if all 81 cells are right, the task is also very
 sensitive to small errors.
 
 \paragraph{Contributions.}
 \begin{enumerate}
 \item A PTQ sweep on the official checkpoint: INT8 is lossless, INT4 costs 4.4 points, and every ternary variant
-(absmean per-tensor and per-channel, TWN threshold~\citep{li2016twn}, with and without INT8 activations, on any
-subset of layers that includes the input projection or block~0) gives 0\% (\S\ref{sec:ptq}).
-\item A mechanism for the collapse. Matched-error Gaussian noise reproduces the quantization curve; the
-tolerance threshold ($\approx$0.28--0.35 relative error) lies below the floor of any per-layer
-ternary quantizer on Gaussian weights ($\approx$0.44). Damage is not a level-wise cascade: with ground-truth previous levels, the
-ternary model is already wrong at nearly every level. Sensitivity is concentrated in the input projection
-and the first transformer block (\S\ref{sec:mechanism}).
-\item Ternary quantization-aware fine-tuning (QAT) from the FP checkpoint recovers 71.15\,$\pm$\,0.40\% in
-55~minutes on one A100 (\S\ref{sec:qat}).
-\item Negative results that bound the fine-tuning approach: five interventions leave the ceiling unchanged, and
-the gap is a distributed capacity loss, not a coarse-level bottleneck (\S\ref{sec:gap}).
-\item Preliminary from-scratch comparisons at small budgets, with an honest account of why our own training recipe
-does not reach the paper's FP number (\S\ref{sec:scratch}).
+we tried (absmean per-tensor and per-channel, ternary-weight-network (TWN) threshold~\citep{li2016twn}, with and
+without INT8 activations, applied to all layers, the transformer body, attention only, MLPs only, or the
+input/output layers only) gives 0\% (\S\ref{sec:ptq}).
+\item An account of the collapse. Gaussian noise of matched relative error reproduces the integer-quantization
+results; the solve rate falls to 50\% at $\approx$0.28 relative error and to 0\% by 0.35, below the
+$\approx$0.44 floor of elementwise ternary rounding on Gaussian weights. A level-wise cascade is not needed to
+explain the collapse: with ground-truth previous levels, the ternary model is already wrong at nearly every
+level. Sensitivity is concentrated in the input projection and the first transformer block (\S\ref{sec:mechanism}).
+\item Ternary quantization-aware fine-tuning (QAT) from the FP checkpoint recovers 71.15\,$\pm$\,0.40\% in under
+an hour on one A100 (\S\ref{sec:qat}).
+\item Negative results that bound the fine-tuning approach: five interventions leave the ceiling unchanged or
+lower it, and a per-puzzle decomposition shows that the gap is not a coarse-level bottleneck (\S\ref{sec:gap}).
+\item Preliminary from-scratch comparisons at small budgets, together with an analysis of why our own training
+recipe does not reach the NCM paper's FP number (\S\ref{sec:scratch}).
 \end{enumerate}
 
 % ---------------------------------------------------------------------------------------------------------
@@ -93,18 +98,23 @@ does not reach the paper's FP number (\S\ref{sec:scratch}).
 NCM~\citep{kumbong2026ncm} has two stages. A multiscale residual VQ-VAE encodes the target sequence into
 $K=12$ levels of codes with lengths $l_k \in \{1,2,4,6,9,13,18,26,37,50,67,89\}$ (322 codes in total for
 Sudoku); level $k$ quantizes what levels $<k$ left unexplained. A transformer then predicts the codes level by
-level, conditioned on a prefix (here the 81-cell puzzle, prefix length 91) and on all coarser levels; positions
+level, conditioned on a prefix (here the serialized 81-cell puzzle, 91 tokens) and on all coarser levels; positions
 within a level are predicted in parallel, so generation takes $K$ forward passes. The VQ decoder maps the final
 residual sum back to tokens. Training uses teacher forcing with stochastic corruption of the conditioning
-levels and a per-level loss weight $w_k \propto l_k^{-\alpha}$.
+levels and a loss weight $w_k = l_k^{-\alpha}/\sum_j l_j^{1-\alpha}$ on each code of level $k$, so $\alpha=0$
+weights all 322 codes equally.
 
-\paragraph{BitNet b1.58.}
+\paragraph{BitNet~b1.58.}
 Each linear layer keeps latent FP weights $W$ and uses, in the forward pass,
 \begin{equation}
 \widehat W = \gamma\cdot\mathrm{clip}\big(\mathrm{round}(W/\gamma),-1,1\big),\qquad \gamma=\mathrm{mean}|W|,
 \end{equation}
-with the straight-through estimator (STE)~\citep{bengio2013ste} in the backward pass. Activations are quantized
-per token to 8 bits with absmax scaling (W1.58A8)~\citep{ma2024era,wang2023bitnet}.
+with the straight-through estimator (STE)~\citep{bengio2013ste} in the backward pass: the forward pass computes
+$W+\mathrm{sg}(\widehat W-W)$, where $\mathrm{sg}$ stops the gradient, so $\partial\mathcal L/\partial W$ is taken to
+be $\partial\mathcal L/\partial\widehat W$. Activations are quantized per token to 8 bits with absmax scaling,
+$\widehat x=s\,\mathrm{clip}(\mathrm{round}(x/s),-127,127)$ with $s=\max_j|x_j|/127$, also with the STE
+(W1.58A8)~\citep{ma2024era}. Unlike BitNet, we add no normalization inside the quantized layers, so the
+architecture of the checkpoint is unchanged.
 
 % ---------------------------------------------------------------------------------------------------------
 \section{Experimental setup}
@@ -115,30 +125,31 @@ We use the official NCM repository (commit \texttt{c7027427}) and its Sudoku-har
 the architecture. The generator has 25.46M parameters: 8 transformer blocks of width 512, an input projection
 (\texttt{wte}) and 12 per-level output heads (\texttt{lm\_heads}). We call the $8\times4=32$ linear layers inside
 the blocks (\texttt{attn.c\_attn}, \texttt{attn.c\_proj}, \texttt{mlp.c\_fc}, \texttt{mlp.c\_proj}) the
-\emph{body} (25.17M parameters, 99.1\% of all linear-layer weights) and the 13 remaining linears the \emph{io} layers. The VQ-VAE (14.9M)
-is frozen and kept in FP throughout.
+\emph{body} (25.17M parameters, 99.1\% of all linear-layer weights) and the 13 remaining linear layers the
+\emph{io} layers. The VQ-VAE (14.9M) is frozen and kept in FP throughout.
 
 \paragraph{Data.}
-The NCM paper does not ship a training script. We regenerated the Sudoku-hard data with the Sudoku generator
-of S-FLM~\citep{deschenaux2026sflm}, which NCM follows for Sudoku (commit \texttt{30def799}, seed 42, 48k train + 2k validation). The 2,000 NCM test puzzles
-are identical, in order, to this validation split, with zero overlap with the training split. We hold out
-1,000 training puzzles for monitoring.
+NCM does not ship a training script. We regenerated the Sudoku-hard data with the Sudoku data pipeline of the
+S-FLM repository~\citep{deschenaux2026sflm} (commit \texttt{30def799}, seed 42, 48k train + 2k validation), whose
+setup NCM follows for Sudoku. The 2,000 NCM test puzzles are identical, in order, to this validation split, with
+zero overlap with the training split. We hold out 1,000 training puzzles for monitoring.
 
 \paragraph{Evaluation.}
 Greedy generation (temperature 0), decoded by the VQ decoder; a puzzle counts as solved if the board is valid and
 equals the reference solution. We report the percentage of the 2,000 test puzzles solved. The official checkpoint
-gives 86.30\% with the official evaluator on a T4 (paper: 86.1\%) and 86.15\% on an A100 (3 puzzles differ, from
-GPU-dependent numerics); we compare every result to the FP number from the same GPU type.
+gives 86.30\% with the official evaluator on a T4 (NCM paper: 86.1\%) and 86.15\% on an A100 (3 puzzles differ
+because of GPU-dependent numerics); we compare every result to the FP number from the same GPU type.
 
 \paragraph{Statistics.}
-The binomial standard error of a solve rate near 70\% on 2,000 puzzles is $\approx$1.0 point. For the main QAT
-recipe we ran 3 seeds (seed changes data order and corruption noise; the starting weights are identical); the
-seed standard deviation is 0.40 points. All other variants are single runs and we only call a difference real
-if it clearly exceeds both.
+The binomial standard error of a solve rate on 2,000 puzzles is $\approx$1.0 point near 70\% (0.8 near 86\%).
+For the main QAT recipe we ran 3 seeds (the seed changes the data order and the corruption noise; the starting
+weights are identical). Their sample standard deviation is 0.40 points, itself a rough estimate with only 3 seeds.
+All other variants are single runs, and we only call a difference real if it clearly exceeds both the standard
+error and the seed standard deviation.
 
 \paragraph{Compute.}
-Single Google Colab GPUs (T4 for the PTQ sweep, A100 for training). One 5,000-step QAT run takes 55 minutes on an
-A100. One run (block~0 kept FP) took 219 minutes, most likely on a slower GPU type that was not logged; this
+Single Google Colab GPUs (T4 for the PTQ sweep, A100 for training). One 5,000-step QAT run takes 43--55~minutes on
+an A100. One run (block~0 kept in FP) took 219~minutes, most likely on a slower GPU type that was not logged; this
 affects only wall-clock time.
 
 % ---------------------------------------------------------------------------------------------------------
@@ -148,9 +159,9 @@ affects only wall-clock time.
 % Source: results_official/asama1_ptq_sudoku_hard.json (T4, full test)
 \begin{table}[t]
 \centering
-\caption{PTQ of the official Sudoku-hard checkpoint (2,000 test puzzles, T4). Rel.\ err.\ is the
-relative Frobenius weight error $\|\widehat W-W\|/\|W\|$ over the quantized layers. Cell accuracy of a
-program that copies the 30 clues and fills the rest at random would be $\approx$44\%.}
+\caption{PTQ of the official Sudoku-hard checkpoint (2,000 test puzzles, T4). Rel.\ err.\ is the relative
+Frobenius weight error pooled over the quantized layers, $\big(\sum_l\|\widehat W_l-W_l\|_F^2/\sum_l\|W_l\|_F^2\big)^{1/2}$.
+Cell accuracy of a program that copies the 30 clues and fills the rest at random would be $\approx$44\%.}
 \label{tab:ptq}
 \small
 \begin{tabular}{llcrr}
@@ -170,20 +181,19 @@ Ternary absmean, per-channel & body & 0.540 & 0.00 & 23.44 \\
 Ternary TWN, per-channel    & body & 0.465 & 0.00 & 18.37 \\
 Ternary absmean, per-tensor & attention only & 0.540 & 0.00 & 41.10 \\
 Ternary absmean, per-tensor & MLP only       & 0.568 & 0.00 & 40.00 \\
-Ternary absmean, per-tensor & io only (13 layers, 0.9\%) & -- & 0.00 & -- \\
+Ternary absmean, per-tensor & io only (13 layers, 0.9\%) & 0.532 & 0.00 & 33.73 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:ptq} shows the PTQ sweep. Eight-bit weights are lossless and 4-bit weights cost 4.4 points,
-consistent with PTQ results on other generators. Every ternary variant solves no puzzle at all, and cell
-accuracy (18--41\%) is below what copying the clues and guessing would give. Restricting ternarization to
-attention, to the MLPs, or to the 13 io layers does not help.
+In the PTQ sweep (Table~\ref{tab:ptq}), 8-bit weights are lossless and 4-bit weights cost 4.4 points. No ternary
+variant solves a single puzzle, and cell accuracy (18--41\%) is below what copying the clues and guessing would
+give. Restricting ternarization to attention, to the MLPs, or to the 13 io layers does not help.
 
 \subsection{Mechanism}
 \label{sec:mechanism}
 
-We ran a measurement-only diagnostic on the first 500 (curve) or 256 (sweeps) test puzzles on an A100
+The diagnostics below involve no training and use the first 500 (curve) or 256 (sweeps) test puzzles on an A100
 (FP: 85.0\% on the first 500).
 
 % Source: results_official/asama2b_diag_ptq_mechanism.json, A_error_curve_first500
@@ -212,40 +222,49 @@ We ran a measurement-only diagnostic on the first 500 (curve) or 256 (sweeps) te
 \end{axis}
 \end{tikzpicture}
 \caption{Solve rate as a function of relative weight error on the 32 body layers. Gaussian noise with matched
-per-layer error (grey) predicts integer quantization (blue) and ternary (red). The dashed line is the
-lowest relative error any per-layer ternary quantizer can reach on Gaussian weights (0.436, computed numerically
-with optimal threshold and scale); it lies beyond the point where the model fails.}
+per-layer error (gray) predicts integer quantization (blue) and is consistent with ternary quantization (red),
+which lies beyond the range where noise already gives 0\%. The dashed line is the lowest relative error any
+elementwise ternary quantizer can reach on Gaussian weights (0.436, computed numerically with optimal threshold
+and scale); it lies beyond the point where the model fails.}
 \label{fig:errcurve}
 \end{figure}
 
-\paragraph{Error magnitude, not ternary structure.}
+\paragraph{Error magnitude is enough to explain the collapse.}
 Figure~\ref{fig:errcurve} plots solve rate against the relative Frobenius error of the body weights. Adding
 isotropic Gaussian noise of a prescribed relative error to each layer reproduces the quantization results:
-INT4 (0.19) gives 83.4\% and noise at 0.20 gives 80.8\%; INT3 (0.42) and noise at 0.40 both give 0\%. The model
-reaches 50\% solved at a relative error of about 0.28 and is essentially at 0\% from 0.35. For Gaussian weights,
-absmean ternarization has relative error 0.513 and the best possible per-layer ternary quantizer (threshold
-search, $L_2$-optimal scale) 0.436; on the real checkpoint we measure 0.46--0.56 (Table~\ref{tab:ptq}). Ternary PTQ therefore cannot
-succeed on this model without reducing error below the tolerance by roughly a factor of 1.5, which no per-layer
-rounding scheme can do. This framing also explains why calibration-free refinements (per-channel scales, TWN
-thresholds) did not help: they move the error by a few hundredths.
+INT4 (0.19) gives 83.4\% and noise at 0.20 gives 80.8\%; INT3 (0.42) and noise at 0.40 both give 0\%. The solve
+rate drops to 50\% at a relative error of about 0.28 and is essentially 0\% from 0.35 onward. For Gaussian
+weights, absmean ternarization has relative error 0.513, and the best elementwise ternary quantizer (threshold
+search, $L_2$-optimal scale) reaches 0.436, the three-level Lloyd--Max distortion of a unit
+Gaussian~\citep{max1960quantizing}. On the real checkpoint we measure 0.465--0.568 (Table~\ref{tab:ptq}). Rounding
+the weights therefore cannot work on this model: the error would have to drop by a factor of about 1.6
+(0.436/0.28) just to reach 50\% solved. The same argument explains why per-channel scales and TWN thresholds did
+not help: they lower the error by at most $\approx$0.1.
+
+Two caveats apply. The noise curve already reaches 0\% at 0.35, so at the measured ternary errors it cannot
+separate error magnitude from ternary structure; the integer quantizers are the matched evidence. And
+calibration-based PTQ that minimizes layer-output rather than weight error (e.g.\ GPTQ~\citep{frantar2023gptq} or
+PT$^2$-LLM~\citep{pt2llm}) produces anisotropic error that this argument does not bound. We did not test such
+methods.
 
 % Source: per_level in asama2b_diag_ptq_mechanism.json
-\paragraph{No level-wise cascade.}
+\paragraph{A cascade is not needed to explain the collapse.}
 A natural hypothesis for a coarse-to-fine model is error accumulation across levels: a slightly wrong coarse
-code derails the finer ones. The data do not support it. With teacher forcing (ground-truth codes for all
-previous levels) the ternary model's per-level accuracy is already 0.08--0.18 on levels 0--10 apart from the
-trivial ones (level 0: 0.116) and 0.43 on the finest level, close to its accuracy in free generation; 446 of 500 puzzles diverge from the FP
-model's codes at level~0. (Levels 1 and 4 are nearly deterministic given the prefix and stay at 0.91 and 1.0
-for all models.) The damage happens inside each forward pass.
+code derails the finer ones. The data do not require it. With teacher forcing (ground-truth codes for all
+previous levels) the ternary model's per-level accuracy is already 0.08--0.18 on levels 0--10 (level~0: 0.116;
+levels 1 and 4 excepted) and 0.43 on the finest level, close to its accuracy in free generation; 446 of 500
+puzzles diverge from the FP model's codes at level~0. (Levels 1 and 4 are nearly deterministic given the prefix:
+the ternary model reaches 0.91 and 1.0 on them, the FP model 0.99 and 1.0.) The damage already happens inside
+each forward pass.
 
-\paragraph{Damage accumulates with depth, sensitivity sits at the input.}
+\paragraph{Damage accumulates with depth; sensitivity sits at the input.}
 The relative drift of the hidden state from FP grows from 0.37 after block~0 to 1.01 after block~7.
-Ternarizing single layers or blocks (first 256 puzzles; ternarizing a single output head gives 84.4--85.6\%,
-i.e.\ FP level) isolates the sensitive parts: the input projection
-\texttt{wte} alone, or either attention layer of block~0 alone, gives 0\%; block~0 alone gives 0\%, block~1
-24.6\%, and blocks 2--7 individually 70--77\%. The earlier ``io layers only $\to$ 0\%'' result is due to
-\texttt{wte}; each output head alone is harmless ($\approx$85\%). Ternarizing the last $k$ blocks degrades
-gracefully (73.4, 57.4, 34.0, 3.1\% for $k=1..4$), while any set containing block~0 gives 0\%.
+Ternarizing single layers or blocks (first 256 puzzles) isolates the sensitive parts. Ternarizing a single output
+head gives 84.4--85.5\%, close to FP. The input projection \texttt{wte} alone, or either attention layer of
+block~0 alone, gives 0\%; block~0 alone gives 0\%, block~1 gives 24.6\%, and blocks 2--7 individually give
+70--77\%. The ``io layers only $\to$ 0\%'' result in Table~\ref{tab:ptq} is therefore due to \texttt{wte}.
+Ternarizing the last $k$ blocks degrades gracefully (73.4, 57.4, 34.0, 3.1\% for $k=1,\dots,4$), while every
+tested set that contains all of block~0 gives 0\%.
 
 \paragraph{Codes are not unique.}
 INT8 weights solve 84.8\% but reproduce the FP model's exact code sequence for only 41.8\% of puzzles (noise at
@@ -257,21 +276,22 @@ agreement with FP is not a useful target for distillation or calibration.
 \label{sec:qat}
 
 \paragraph{Recipe (E3).}
-Starting from the FP checkpoint, we replace the 32 body linears by W1.58A8 layers (absmean per-tensor ternary
-weights, per-token INT8 absmax activations, STE), keep the io layers in FP, and fine-tune with the NCM
-teacher-forcing loss. Since no training script is released, we had to choose the hyperparameters the paper does
-not state for Sudoku: linearly decreasing conditioning corruption with mean 0.5 (0.75 at the coarsest
-conditioning level to 0.25 at the finest), $\alpha=0$, batch 256, AdamW with peak learning rate $10^{-4}$, 100
-warm-up steps and cosine decay to $10^{-5}$. We verified that our teacher-forcing input builder reproduces the
-official greedy generator's predictions exactly (100\% agreement at every level), and the official FP model has
-teacher-forcing loss 0.105 on our data.
+Starting from the FP checkpoint, we replace the 32 body linear layers with W1.58A8 layers (absmean per-tensor
+ternary weights, per-token INT8 absmax activations, STE), keep the io layers in FP, and fine-tune with the NCM
+teacher-forcing loss. Since no training script has been released, we had to choose the hyperparameters the NCM
+paper does not state for Sudoku: linearly decreasing conditioning corruption with mean 0.5 (from 0.75 at the
+coarsest conditioning level to 0.25 at the finest), $\alpha=0$, batch 256, AdamW ($\beta=(0.9,0.99)$, weight
+decay 0.01 on weight matrices) with peak learning rate $10^{-4}$, 100 warm-up steps and cosine decay to
+$10^{-5}$, gradient clipping at 1.0, and bf16 mixed precision. We verified that our teacher-forcing input builder
+reproduces the official greedy generator's predictions exactly (100\% agreement at every level), and the official
+FP model has a teacher-forcing loss of 0.105 on our data.
 
 % Source: asama2b_E3_ternary_ft.json, _5k.json, _seeds.json, _kd_partial.json, _alpha1.json, _a16.json, _pc.json, _b0fp.json
 \begin{table}[t]
 \centering
-\caption{Ternary QAT fine-tuning from the FP checkpoint (A100, full test). 5,000 steps $\times$ 256 sequences is
-$\approx$2.5\% of the NCM pretraining sample budget (50k steps $\times$ 1024). Seed std of the main recipe is
-0.40; binomial SE $\approx$1.0.}
+\caption{Ternary QAT from the FP checkpoint (A100, full test). 5,000 steps $\times$ 256 sequences is
+$\approx$2.5\% of the NCM pretraining sample budget (50k steps $\times$ 1,024). Sample standard deviation over
+seeds of the main recipe: 0.40 points; binomial standard error: $\approx$1.0 point.}
 \label{tab:qat}
 \small
 \begin{tabular}{lrrl}
@@ -284,28 +304,29 @@ Ternary PTQ (body)          & 0     & 0.00  & Table~\ref{tab:ptq} \\
 E3                          & 1,500 & 69.70 & 15 min \\
 \textbf{E3-long} (3 seeds)  & 5,000 & \textbf{71.15\,$\pm$\,0.40} & 71.60 / 70.85 / 71.00; 82.6\% of FP \\
 \midrule
-\quad + distillation from FP teacher, $\lambda$ warm-up & 2,000 & -- & stopped; equal to E3-long at 1k/2k steps \\
-\quad $\alpha=1$ (coarsest level weighted 27$\times$ more) & 5,000 & 69.05 & worse ($\approx$5 seed std) \\
-\quad W1.58A16 (no activation quantization)               & 5,000 & 71.05 & INT8 activations are free \\
+\quad distillation from FP teacher, $\lambda$ warm-up & 2,000 & -- & stopped; equal to E3-long at 1k/2k steps \\
+\quad $\alpha=1$ (coarsest level weighted 27$\times$ more) & 5,000 & 69.05 & worse ($-2.1$) \\
+\quad W1.58A16 (no activation quantization)               & 5,000 & 71.05 & INT8 act.\ cost nothing measurable \\
 \quad per-channel ternary scale                         & 5,000 & 71.80 & within noise \\
-\quad block 0 kept FP (28 ternary body layers)          & 5,000 & 71.30 & within noise \\
+\quad block 0 kept in FP (28 ternary body layers)       & 5,000 & 71.30 & within noise \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 % Source: during_training_test_subset_256 and holdout_tf_loss in asama2b_E3_ternary_ft_5k.json and _seeds.json
+% The FP solve rate on the first 256 puzzles was not recorded; the dashed line is the full-test A100 value.
 \begin{figure}[t]
 \centering
 \begin{tikzpicture}
 \begin{axis}[
   width=0.48\linewidth, height=4.8cm,
-  xlabel={training step}, ylabel={solved \% (first 256 test)},
+  xlabel={training step}, ylabel={solved \% (256 test puzzles)},
   xmin=0, xmax=5200, ymin=0, ymax=92, grid=major, grid style={gray!20},
   legend style={font=\scriptsize, at={(0.98,0.03)}, anchor=south east},
   tick label style={font=\scriptsize}, label style={font=\small},
   scaled x ticks=false, xticklabel style={/pgf/number format/1000 sep={,}}]
-\addplot[dashed, black] coordinates {(0,85.5) (5200,85.5)};
-\addlegendentry{FP}
+\addplot[dashed, black] coordinates {(0,86.15) (5200,86.15)};
+\addlegendentry{FP (full test)}
 \addplot[thick, mark=*, mark size=1.5pt, color=red!70!black] coordinates {
   (0,0) (1000,66.41) (2000,69.53) (3000,69.53) (4000,69.53) (5000,71.09)};
 \addlegendentry{seed 0}
@@ -320,7 +341,7 @@ E3                          & 1,500 & 69.70 & 15 min \\
 \begin{tikzpicture}
 \begin{axis}[
   width=0.48\linewidth, height=4.8cm,
-  xlabel={training step}, ylabel={holdout TF loss},
+  xlabel={training step}, ylabel={held-out loss},
   xmin=500, xmax=5200, ymin=0.19, ymax=0.25, grid=major, grid style={gray!20},
   tick label style={font=\scriptsize}, label style={font=\small},
   scaled x ticks=false, xticklabel style={/pgf/number format/1000 sep={,}},
@@ -329,55 +350,59 @@ E3                          & 1,500 & 69.70 & 15 min \\
   (1000,0.2464) (2000,0.2251) (3000,0.2148) (4000,0.2082) (5000,0.2044)};
 \end{axis}
 \end{tikzpicture}
-\caption{E3-long. Left: solve rate on the first 256 test puzzles during training, three seeds; it plateaus after
-$\approx$2,000 steps. Right: teacher-forcing loss on held-out training puzzles (seed 0) keeps decreasing. The
-initial point (step 0, 0\%) is the ternary PTQ model.}
+\caption{E3-long. Left: solve rate on the first 256 test puzzles during training, three seeds (standard error
+$\approx$3 points at this sample size); it stops improving after $\approx$2,000 steps. Right: teacher-forcing loss
+on held-out training puzzles (seed 0) keeps decreasing. The initial point (step 0, 0\%) is the ternary PTQ model.}
 \label{fig:curves}
 \end{figure}
 
-Table~\ref{tab:qat} and Figure~\ref{fig:curves} summarize the results. Fine-tuning lifts the ternary model from
-0\% to 49.6\% (first 256 puzzles) within 250 steps and to 69.7\% (full test) within 1,500 steps. Tripling the
-budget adds only 1.5--2 points: the solve rate plateaus after about 2,000 steps although the held-out
-teacher-forcing loss continues to fall. Three seeds give 71.60, 70.85 and 71.00\%, i.e.\ 71.15\,$\pm$\,0.40\%,
-82.6\% of the FP model. Fine-tuning shifts the weights well past the PTQ tolerance (Section~\ref{sec:mechanism}):
-QAT does not make ternary rounding more accurate, it moves the network to a different solution that works under
-ternary constraints, in line with observations that sub-3-bit fine-tuning substantially changes the weight
-distribution~\citep{liu2025paretoq}.
+Fine-tuning (Table~\ref{tab:qat}, Figure~\ref{fig:curves}) lifts the ternary model from 0\% to 49.6\% (first 256
+puzzles) within 250 steps and to 69.7\% (full test) within 1,500 steps. A 3.3$\times$ longer budget adds only
+1.2--1.9 points (1.45 on the 3-seed mean): the solve rate stops improving after about 2,000 steps, although the
+held-out teacher-forcing loss continues to fall. Three seeds give 71.60, 70.85 and 71.00\%, i.e.\
+71.15\,$\pm$\,0.40\%, 82.6\% of the FP model. Any ternary matrix is at least $\approx$0.44 relative error away
+from near-Gaussian FP weights, well past the PTQ tolerance (\S\ref{sec:mechanism}), so QAT cannot work by making
+rounding more accurate. Instead it moves the network to a different solution that works under ternary
+constraints, in line with the observation that below 3 bits fine-tuned representations change drastically from
+their pretrained ones~\citep{liu2025paretoq}.
 
 % ---------------------------------------------------------------------------------------------------------
 \section{Where is the remaining gap?}
 \label{sec:gap}
 
 \paragraph{Interventions that did not help.}
-Each of the following targets one hypothesis for the 15-point gap; none moves the result beyond the seed
-spread (Table~\ref{tab:qat}).
-\emph{Distillation} from the FP teacher with gradual quantization ($\lambda$ ramped over 500 steps) matched E3-long
-at steps 1,000 and 2,000 (66.8 / 68.8 vs.\ 66.4 / 69.5\% on 256 puzzles) and was stopped; the ramp only delays the
-loss spike to the point where $\lambda=1$.
+Each of the following tests one hypothesis for the 15-point gap. None improves the result beyond the seed spread,
+and $\alpha=1$ makes it worse (Table~\ref{tab:qat}).
+\emph{Distillation} from the FP teacher with gradual quantization ($\widetilde W=W+\lambda(\widehat W-W)$, likewise
+for activations, with $\lambda$ ramped from 0 to 1 over 500 steps) matched E3-long at steps 1,000 and 2,000
+(66.8 / 68.8 vs.\ 66.4 / 69.5\% on 256 puzzles) and was stopped; the ramp only delayed the loss spike to the
+point where $\lambda=1$.
 \emph{Coarse-level reweighting} ($\alpha=1$, which weights the single coarsest code 27$\times$ more than with
-$\alpha=0$) left coarsest-level accuracy at $\approx$80\% and hurt finer levels (69.05\%).
+$\alpha=0$) left coarsest-level accuracy at $\approx$80\% and lowered the solve rate (69.05\%).
 \emph{16-bit activations} (W1.58A16) gave 71.05\%: the gap comes from ternary weights, and INT8 activations cost
-nothing on this model.
-\emph{Per-channel scales} ($\widehat W=\mathrm{diag}(\gamma)\,T$) lowered held-out loss slightly (0.195 vs.\ 0.204)
-without changing the solve rate (71.80\%).
-\emph{Keeping block~0 in FP}, the most PTQ-sensitive block, gave 71.30\% with identical held-out loss (0.204).
+no measurable accuracy on this model (0.1 points).
+\emph{Per-channel scales} ($\widehat W=\mathrm{diag}(\gamma)\,T$ with $T$ ternary) lowered held-out loss slightly
+(0.195 vs.\ 0.204) without changing the solve rate (71.80\%).
+\emph{Keeping block~0} (the most PTQ-sensitive block) \emph{in FP} gave 71.30\% with identical held-out loss
+(0.204).
 
 % Source: asama2b_diag_coarse_code_decomposition.json
 \paragraph{The gap is not in the coarsest code.}
-On the full test set we compared the generated coarsest code (one code, level 0) with the code the tokenizer
-assigns to the true solution. The FP model gets it right for 85.5\% of puzzles and E3-long for 76.7\%.
-Conditional solve rates are $P(\text{solved}\mid\text{correct})=88.1\%$ vs.\ 74.6\% and
-$P(\text{solved}\mid\text{wrong})=74.8\%$ vs.\ 61.8\%. A wrong coarsest code still leads to the correct board most
-of the time, consistent with the non-uniqueness of codes above. If the ternary model had the FP model's
-coarsest-code accuracy, it would solve $0.855\cdot74.6+0.145\cdot61.8\approx72.7\%$, only 1.1 points more: the
-coarsest decision explains about 1 of the 14.5 points. The rest is a lower conditional success at every
-subsequent level, i.e.\ a distributed loss of capacity. This also explains why reweighting the coarsest level
-and distilling level-wise targets did not help.
+On the full test set we compared the generated coarsest code (one code, level~0) with the code the tokenizer
+assigns to the true solution. The FP model gets it right for 85.5\% of puzzles and E3-long (seed 0, 71.60\%
+solved) for 76.7\%. Conditional solve rates (FP vs.\ E3-long) are $P(\text{solved}\mid\text{correct})=88.1\%$
+vs.\ 74.6\% and $P(\text{solved}\mid\text{wrong})=74.8\%$ vs.\ 61.8\%. A wrong coarsest code still leads to the
+correct board most of the time, consistent with the non-uniqueness of codes above. If the ternary model had the FP
+model's coarsest-code accuracy and unchanged conditional rates, it would solve
+$0.855\cdot74.6+0.145\cdot61.8\approx72.7\%$, only 1.1 points more: the coarsest decision explains about 1 of this
+run's 14.5-point gap. The rest comes from a lower success rate given the coarsest code, that is, from later levels
+that we did not localize further; this is consistent with a loss of capacity spread across levels. It is also
+consistent with the finding that reweighting the coarsest level and distilling level-wise targets did not help.
 
 Together with the block-0 result, this suggests that within a 2.5\% fine-tuning budget the 25M-parameter body
-simply has less usable capacity when ternary. Whether a longer budget, ternary pretraining from scratch at the
-paper's budget, or a larger body closes the gap is open; BitNet results suggest the gap shrinks with
-scale~\citep{ma2024era}, while fine-tuning studies on LLMs report that it can widen with
+has less usable capacity when ternary. Whether a larger budget, ternary pretraining from scratch at the NCM
+paper's budget, or a larger body closes the gap remains open; BitNet results suggest the gap shrinks with
+scale~\citep{ma2024era}, while fine-tuning studies on large language models (LLMs) report that it can widen with
 scale~\citep{bitdistill}.
 
 % ---------------------------------------------------------------------------------------------------------
@@ -388,12 +413,12 @@ scale~\citep{bitdistill}.
 \begin{table}[t]
 \centering
 \caption{Training from scratch with our recipe (A100, full test, single seed). Budgets are 2\% and 6\% of the
-paper's sample budget. Holdout loss is teacher-forcing loss on clean inputs.}
+NCM paper's sample budget. Held-out loss is teacher-forcing loss on clean inputs.}
 \label{tab:scratch}
 \small
 \begin{tabular}{lrrrl}
 \toprule
-Run & Steps & Solved \% & Holdout loss & Note \\
+Run & Steps & Solved \% & Held-out loss & Note \\
 \midrule
 FP (E1)        & 4,000  & 21.75 & 0.378 & \\
 Ternary (E2)   & 4,000  & 16.45 & 0.411 & 76\% of FP \\
@@ -404,58 +429,67 @@ Ternary (E2-long) & 12,000 & 22.75 & 0.369 & 89\% of FP; loss flat from 8k \\
 \end{table}
 
 Table~\ref{tab:scratch} reports from-scratch training with the same recipe (peak learning rate
-$3\cdot10^{-4}$, 500 warm-up steps). Both models remain far below the paper's 86.1\%, and we want to be explicit
-that this is a limitation of our recipe rather than of NCM: at 12k steps the FP model solves 98.6\% of the first
-500 \emph{training} puzzles but only 24.8\% of the first 500 test puzzles, i.e.\ it memorizes. We guessed several
-settings (batch 256 vs.\ 1024, corruption schedule, $\alpha$, absence of data augmentation), and a random-rate
-corruption variant inspired by the official LM1B config did worse (18.35\%) while lowering teacher-forcing loss,
-which also shows that teacher-forcing loss is not a reliable proxy for solve rate here.
+$3\times10^{-4}$, 500 warm-up steps). Both models remain far below the NCM paper's 86.1\%, and the shortfall lies
+in our recipe rather than in NCM: at 12,000 steps the FP model solves 98.6\% of the first 500 \emph{training}
+puzzles but only 24.8\% of the first 500 test puzzles, i.e.\ it memorizes. We guessed several settings (batch 256
+vs.\ 1,024, corruption schedule, $\alpha$, absence of data augmentation), and a random-rate corruption variant
+inspired by the official LM1B (One Billion Word) configuration did worse (18.35\%) while lowering teacher-forcing
+loss, which also shows that teacher-forcing loss is not a reliable proxy for solve rate here.
 
-Within this recipe two observations are robust enough to report. The ternary model needs roughly
-1.3--1.6$\times$ more steps to reach the same held-out loss as FP, and the relative gap in solve rate narrows from
-76\% to 89\% of FP between 4k and 12k steps. At 12k steps the FP model's held-out loss rises while the ternary
-model's stays flat and ends lower (0.369 vs.\ 0.436), i.e.\ the ternary constraint acts as a regularizer against
-memorization. These are single-seed results at budgets far below the paper's and should be read as preliminary.
+Two observations from these runs are still worth reporting. The ternary model needs roughly 1.3--1.6$\times$ more
+steps to reach the same held-out loss as FP, and its solve rate rises from 76\% to 89\% of FP between 4,000 and
+12,000 steps, partly because the FP model starts to overfit. At 12,000 steps the FP model's held-out loss rises
+while the ternary model's stays flat and ends lower (0.369 vs.\ 0.436), consistent with the ternary constraint
+acting as a regularizer against memorization. These are single-seed results at budgets far below the NCM paper's
+and should be read as preliminary.
 
 % ---------------------------------------------------------------------------------------------------------
 \section{Memory}
 \label{sec:memory}
 
-Ternary weights need $\log_2 3\approx1.58$ bits per weight (2 bits with simple packing). The body of the Sudoku
-generator shrinks from 50.3\,MB (FP16) to 5.0\,MB at 1.58 bits or 6.3\,MB at 2 bits; the remaining FP parameters (io layers, norms, embeddings) add
-$\approx$0.6\,MB. The frozen VQ-VAE (14.9M parameters) is not quantized here; only its decoder is needed at
-inference. We do not report speed or energy: our ternary layers are simulated in FP arithmetic, and realizing the
-savings requires dedicated kernels.
+Ternary weights carry $\log_2 3\approx1.58$ bits per weight; practical packings use 1.6 bits (5 trits per byte)
+or 2 bits. The body of the Sudoku generator shrinks from 50.3\,MB (FP16) to 5.0\,MB at 1.58 bits or 6.3\,MB at
+2 bits; the remaining FP16 parameters (io layers, norms, embeddings; $\approx$0.29M) add $\approx$0.6\,MB. The
+frozen VQ-VAE (14.9M parameters) is not quantized here and is not included in these figures; at inference its
+decoder, its codebooks and the encoder's token embedding are needed. We do not report speed or energy: our
+ternary layers are simulated in FP arithmetic, and realizing the savings requires dedicated kernels such as
+bitnet.cpp~\citep{wang2024bitnetcpp}.
 
 % ---------------------------------------------------------------------------------------------------------
 \section{Related work}
 
 \paragraph{Ternary and low-bit language models.}
-BitNet~\citep{wang2023bitnet} and BitNet~b1.58~\citep{ma2024era} train ternary-weight LLMs from scratch with
-8-bit activations. ParetoQ~\citep{liu2025paretoq} compares 1--4-bit QAT under a unified framework and reports a
-transition between 2 and 3 bits, below which fine-tuned weights move far from their pretrained values.
-Fine-tuning FP LLMs into 1.58-bit models leaves a gap that BitNet Distillation~\citep{bitdistill} closes with
-architectural refinement, continued pretraining and distillation. Post-training ternarization of LLMs is an
-active area~\citep{pt2llm}; our error-tolerance analysis gives a simple test for when such methods can or cannot
-work on a given model.
+BitNet~\citep{wang2023bitnet} trains binary-weight ($\{-1,+1\}$) LLMs from scratch, and
+BitNet~b1.58~\citep{ma2024era,ma2025bitnet2b4t} ternary-weight LLMs, both with 8-bit activations; BitNet~a4.8
+reduces activations to 4~bits~\citep{wang2024bitneta48}, and Spectra studies ternary pretraining at
+scale~\citep{kaushal2024spectra}. ParetoQ~\citep{liu2025paretoq} compares 1--4-bit QAT under a unified framework
+and reports a transition between 2 and 3 bits, below which fine-tuned representations change drastically from
+their pretrained ones. Fine-tuning FP LLMs into 1.58-bit models leaves a gap that BitNet
+Distillation~\citep{bitdistill} closes with architectural refinement, continued pretraining and distillation.
+Post-training ternarization of LLMs is an active area~\citep{pt2llm}; our error-tolerance analysis offers a simple
+check of whether data-free rounding that minimizes weight error can work on a given model.
 
 \paragraph{Quantization of non-autoregressive and coarse-to-fine generators.}
-For visual autoregressive models with next-scale prediction (VAR~\citep{tian2024var}), quantization work is PTQ
-and degrades below 4--6 bits~\citep{litevar,ptq4arvg}. Diffusion language models have been studied with PTQ
-down to 4 bits~\citep{lin2025dllmquant}. Ternary QAT has been shown for diffusion transformers in
-images~\citep{lu2024terdit}. We are not aware of ternary training or quantization of coarse-to-fine \emph{text}
-generators such as NCM~\citep{kumbong2026ncm} (literature search as of November 2026).
+For visual autoregressive models with next-scale prediction (VAR~\citep{tian2024var}), existing quantization work
+uses PTQ and targets 4--8 bits; 4-bit weights degrade sharply unless sensitive layers stay in higher precision or
+special number formats are used~\citep{litevar,ptq4arvg,wei2025fpqvar,moon2026shiftsum}. For diffusion language
+models, PTQ has been studied down to 3-bit weights and W4A4, with 4-bit weight-only quantization close to lossless
+and sharp drops below~\citep{lin2025dllmquant}; dedicated PTQ reaches 2-bit weights~\citep{zhang2025quantdllm}.
+Ternary QAT has been shown for diffusion transformers in images~\citep{lu2024terdit}. We are not aware of ternary
+training or quantization of coarse-to-fine \emph{text} generators such as NCM~\citep{kumbong2026ncm} (arXiv and
+Semantic Scholar search, November 2026).
 
 % ---------------------------------------------------------------------------------------------------------
 \section{Limitations}
 
 \begin{itemize}
-\item \textbf{One task, one small model.} All results are on Sudoku-hard with a 25M-parameter generator. Sudoku is
-an all-or-nothing metric and may be more sensitive to weight error than open-ended text. The official NCM text
-checkpoints (e.g.\ LM1B, OWT) are the obvious next step.
+\item \textbf{One task, one small model.} All results are on Sudoku-hard with a 25M-parameter generator. The
+Sudoku solve rate is an all-or-nothing metric and may be more sensitive to weight error than open-ended text. The
+official NCM text checkpoints (e.g.\ LM1B, OpenWebText) are the obvious next step.
 \item \textbf{Unofficial training recipe.} Fine-tuning hyperparameters and all from-scratch settings are our
-guesses; from-scratch FP training does not reproduce the paper.
+guesses; from-scratch FP training does not reproduce the NCM paper.
 \item \textbf{Seeds.} Only the main QAT recipe has 3 seeds; all variants and from-scratch runs are single runs.
+\item \textbf{PTQ methods.} We tested data-free rounding only; calibration-based ternary PTQ was not tried.
 \item \textbf{Simulated quantization.} No speed or energy measurements.
 \item \textbf{Diagnostic subsets.} Mechanism experiments use the first 256 or 500 test puzzles.
 \end{itemize}
@@ -464,16 +498,17 @@ guesses; from-scratch FP training does not reproduce the paper.
 \section{Conclusion}
 
 Ternary weights and coarse-to-fine generation can be combined, but not after the fact. On NCM Sudoku-hard,
-ternary PTQ fails for a simple quantitative reason---the model tolerates about 0.3 relative weight error and
-ternary rounding cannot go below about 0.44---while a short quantization-aware fine-tuning recovers 83\% of FP
-performance with free INT8 activations. The remaining gap is a distributed capacity loss that the obvious
-fine-tuning fixes do not touch, which points to ternary pretraining at full budget and to larger models as the
-next experiments.
+ternary PTQ fails for a simple quantitative reason: the model tolerates about 0.3 relative weight error, and
+elementwise ternary rounding of near-Gaussian weights cannot go below about 0.44. A short quantization-aware
+fine-tuning run, by contrast, recovers 83\% of FP performance, and quantizing activations to INT8 costs no
+measurable accuracy on top of that. The remaining gap is not located in the coarsest decision, and none of the
+fine-tuning changes we tried reduces it. This points to ternary pretraining at full budget and to larger models
+as the next experiments.
 
 \paragraph{Reproducibility.}
 Code (Colab notebooks, quantization and training modules), all logs, and a JSON file for every number in this
-paper are available at \url{https://github.com/drFurkanGuven/ternary-ncm}. External code is pinned to commits (NCM \texttt{c7027427}, S-FLM
-generator \texttt{30def799}).
+paper are available at \url{https://github.com/drFurkanGuven/ternary-ncm}. External code is pinned to commits (NCM
+\texttt{c7027427}, S-FLM \texttt{30def799}).
 
 \bibliographystyle{plainnat}
 \bibliography{refs}

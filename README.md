@@ -18,15 +18,14 @@ checkpoint** ([HazyResearch/ncm](https://github.com/HazyResearch/ncm) @ `c702742
 | Post-training quantization, **ternary** (every variant) | **0.00** | complete collapse |
 | **Ternary QAT fine-tuning** from the FP checkpoint, 5k steps | **71.15 ± 0.40** (3 seeds) | 82.6% of FP, 55 min on one A100 |
 
-**Why post-training ternarization fails.** The collapse is set by the *size* of the weight error, not by its
-ternary structure: Gaussian noise with the same relative error ‖ΔW‖/‖W‖ has the same effect. The model
-tolerates ≈0.28 relative error (50% solved) and fails from ≈0.35, while even the best possible per-layer
-ternary quantizer has ≈0.44 on Gaussian weights.
+**Why post-training ternarization fails.** The collapse is explained by the *size* of the weight error alone:
+Gaussian noise with matched relative error ‖ΔW‖/‖W‖ reproduces the integer-quantization results. The model
+tolerates ≈0.28 relative error (50% solved) and fails from ≈0.35, while even the best elementwise
+ternary quantizer has ≈0.44 on Gaussian weights. Calibration-based ternary PTQ was not tested.
 
 **What does not close the remaining gap.** Distillation from the FP teacher, coarse-level loss reweighting
 (α=1), per-channel scales, 16-bit activations, and keeping the most sensitive block (block 0) in FP all stay
-within noise of 71%. INT8 activations cost nothing. The gap is spread over all levels, not concentrated in the
-coarsest code.
+within noise of 71% (α=1 is worse). INT8 activations cost no measurable accuracy. The gap is not concentrated in the coarsest code.
 
 Full table with every experiment: [docs/README_TR.md](docs/README_TR.md). Paper draft: [paper/](paper/).
 
@@ -81,10 +80,10 @@ is independent:
 | 9b | E1 / E2 long, 12k steps | ≈2 h each | `*_12k.json` |
 | 9c | Memorization check (train vs test) | 5 min | `asama2b_diag_E1_long_train_vs_test.json` |
 | 9d | LM1B-style corruption | ≈2 h | `asama2b_E1_fp_scratch_12k_lm1bcorr.json` |
-| 9e–9h | E3 variants: distillation, α=1, W1.58A16, per-channel scale | 55 min each | `asama2b_E3_ternary_ft_5k_{kd_partial,alpha1,a16,pc}.json` |
+| 9e–9h | E3 variants: distillation, α=1, W1.58A16, per-channel scale | 43–55 min each | `asama2b_E3_ternary_ft_5k_{kd_partial,alpha1,a16,pc}.json` |
 | 11 | PTQ collapse mechanism (measurement only) | 20–30 min | `asama2b_diag_ptq_mechanism.json` |
 | 12 | E3-long, 5k steps, seeds 1 and 2 (seed 0: same cell with `SEED=0`) | 55 min each | `asama2b_E3_ternary_ft_5k.json`, `asama2b_E3_ternary_ft_5k_seeds.json` |
-| 13 | E3 with block 0 kept FP | 55 min | `asama2b_E3_ternary_ft_5k_b0fp.json` |
+| 13 | E3 with block 0 kept FP | 55 min (our logged run took 219 min, GPU type not recorded) | `asama2b_E3_ternary_ft_5k_b0fp.json` |
 
 The coarse-code decomposition (`asama2b_diag_coarse_code_decomposition.json`) was run as a standalone cell.
 Its procedure is described in the paper (Section 6).
